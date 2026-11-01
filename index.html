@@ -308,12 +308,30 @@ function applyTmpl(){const t=T($('#qtpl').value);if(!t)return;
 {const _qd=quoteDoc;quoteDoc=function(q){let h=_qd(q);if(isOwner()){const pr=qTotals(q).sub,c=quoteCost(q);h=h.replace('<div class="qv">',profitBox(pr,c,'Quote ')+'<div class="qv">')}return h}}
 
 /* ---- Jobs: actual part costs + profit ---- */
+/* Parts: our cost vs customer (retail) price. OWNER ONLY: built only inside the owner part of the job form, never for techs/billing. */
+let pcView='cost';
+const pcNum=v=>v===''||v==null||isNaN(+v)||+v<=0?null:+v;
+function pcRows(){if(!isOwner())return{rows:[],src:''};const q=Q($('#jq')?.value);const qp=q?(q.items||[]).filter(i=>i.type=='part'):[];
+ if(ja.length)return{src:'Parts used on this job (actual cost paid)',rows:ja.map(a=>{const p=P(a.partId),ql=a.partId&&qp.find(i=>i.partId==a.partId);return{name:p?.name||a.desc||'Part',qty:+a.qty||0,cost:pcNum(a.cost),retail:ql?pcNum(ql.price):pcNum(sell(p))}})};
+ return{src:q?'Parts on the linked quote '+esc(q.num||''):'',rows:qp.map(i=>{const p=P(i.partId);return{name:i.desc||p?.name||'Part',qty:+i.qty||0,cost:pcNum(i.cost!=null&&i.cost!==''?i.cost:p?.cost),retail:pcNum(i.price)}})}}
+function drawPc(){const el=$('#jpc');if(!el)return;if(!isOwner()){el.innerHTML='';return}const {rows,src}=pcRows();
+ if(!rows.length){el.innerHTML='';return}
+ const d=v=>v==null?'<span style="color:var(--m)">—</span>':money(v);let tc=0,tr=0,pc=0,pr=0,skip=0;
+ rows.forEach(r=>{if(r.cost!=null)tc+=r.cost*r.qty;if(r.retail!=null)tr+=r.retail*r.qty;if(r.cost!=null&&r.retail!=null){pc+=r.cost*r.qty;pr+=r.retail*r.qty}else skip++});
+ const gp=pr-pc;
+ el.innerHTML=`<div class="pcbox pcv-${pcView}"><div class="pchead"><h3 style="font-size:15px;margin:0">Parts: cost vs retail <small style="color:var(--m);font-weight:400">(owner only)</small></h3><div class="pctog"><button type="button" class="${pcView=='cost'?'on':''}" onclick="pcView='cost';drawPc()">Cost</button><button type="button" class="${pcView=='retail'?'on':''}" onclick="pcView='retail';drawPc()">Retail</button></div></div>
+ <div style="color:var(--m);font-size:12px;margin:2px 0 6px">${src}</div>
+ <div class="tw"><table class="pct"><tr><th>Part</th><th class="n">Qty</th><th class="n pcc">Cost each</th><th class="n pcc">Cost total</th><th class="n pcr">Retail each</th><th class="n pcr">Retail total</th></tr>
+ ${rows.map(r=>`<tr><td>${esc(r.name)}</td><td class="n">${r.qty}</td><td class="n pcc">${d(r.cost)}</td><td class="n pcc">${r.cost==null?d(null):money(r.cost*r.qty)}</td><td class="n pcr">${d(r.retail)}</td><td class="n pcr">${r.retail==null?d(null):money(r.retail*r.qty)}</td></tr>`).join('')}
+ <tr class="pctot"><td>Total</td><td></td><td class="pcc"></td><td class="n pcc"><b>${money(tc)}</b></td><td class="pcr"></td><td class="n pcr"><b>${money(tr)}</b></td></tr></table></div>
+ <div class="pcsum"><div>Our cost<br><b>${money(tc)}</b></div><div>Customer (retail)<br><b>${money(tr)}</b></div><div>Gross profit<br><b style="color:${gp<0?'#c0392b':'#1e8e4e'}">${pr?money(gp):'—'}</b></div><div>Margin<br><b>${pct(pr,pc)}</b></div></div>
+ ${skip?`<small style="color:var(--m)">${skip} line${skip>1?'s':''} without a cost or retail price ${skip>1?'are':'is'} shown as — and left out of profit and margin.</small>`:''}</div>`}
 let ja=[];
 {const _ej=editJob;editJob=function(id,fq){_ej(id,fq);if(!isOwner()||!$('#modal').innerHTML)return;const j=id?J(id):{};ja=JSON.parse(JSON.stringify(j.actual||[]));
- const btns=$('#modal .modal>div>div:last-child');btns.insertAdjacentHTML('beforebegin',`<div class="noprint" style="margin-top:14px;border-top:1px solid var(--l);padding-top:10px"><h3 style="font-size:15px;margin:0">Actual part costs paid <small style="color:var(--m);font-weight:400">(owner only · updates the part's "last cost")</small></h3><div id="jact"></div>${psPicker('pkJob','🔍 Search catalog part…')}<button class="btn sm s" onclick="ja.push({partId:'',desc:'',qty:1,cost:0,date:ymd(new Date())});drawJa()">+ Other (not in catalog)</button><div id="jprof"></div></div>`);drawJa(j)}}
+ const btns=$('#modal .modal>div>div:last-child');btns.insertAdjacentHTML('beforebegin',`<div class="noprint" style="margin-top:14px;border-top:1px solid var(--l);padding-top:10px"><h3 style="font-size:15px;margin:0">Actual part costs paid <small style="color:var(--m);font-weight:400">(owner only · updates the part's "last cost")</small></h3><div id="jact"></div>${psPicker('pkJob','🔍 Search catalog part…')}<button class="btn sm s" onclick="ja.push({partId:'',desc:'',qty:1,cost:0,date:ymd(new Date())});drawJa()">+ Other (not in catalog)</button><div id="jprof"></div><div id="jpc"></div></div>`);drawJa(j);const jq=$('#jq');if(jq)jq.addEventListener('change',jprof)}}
 function addJa(){const v=$('#jaadd').value;if(!v)return;const p=P(v);ja.push({partId:p?p.id:'',desc:p?p.name:'',qty:1,cost:p?(p.lastCost??p.cost??0):0,date:ymd(new Date())});drawJa()}
 function drawJa(){$('#jact').innerHTML=ja.map((a,n)=>`<div class="row" style="align-items:center;margin-bottom:4px">${a.partId?`<div style="flex:3">${esc(P(a.partId)?.name||a.desc)}</div>`:`<input style="flex:3" placeholder="Description" value="${esc(a.desc)}" oninput="ja[${n}].desc=this.value">`}<input style="flex:0 0 70px;min-width:0" type="number" step="0.25" title="Qty" value="${a.qty}" oninput="ja[${n}].qty=+this.value;jprof()"><input style="flex:0 0 90px;min-width:0" type="number" step="0.01" title="Cost paid each" value="${a.cost}" oninput="ja[${n}].cost=+this.value;jprof()"><input style="flex:0 0 140px;min-width:0" type="date" value="${a.date}" oninput="ja[${n}].date=this.value"><button class="btn sm d" style="flex:0" onclick="ja.splice(${n},1);drawJa()">✕</button></div>`).join('')||'<small style="color:var(--m)">None recorded — profit uses the quote\'s estimated part costs.</small>';jprof()}
-function jprof(){const el=$('#jprof');if(!el)return;const j={id:window._jid||'',quote:$('#jq')?.value,actual:ja};const f=jobFin(j);el.innerHTML=f.price||f.cost?profitBox(f.price,f.cost,'Job '):'<small style="color:var(--m)">Link a quote to see job profit.</small>'}
+function jprof(){try{drawPc()}catch(e){console.warn(e)}const el=$('#jprof');if(!el)return;const j={id:window._jid||'',quote:$('#jq')?.value,actual:ja};const f=jobFin(j);el.innerHTML=f.price||f.cost?profitBox(f.price,f.cost,'Job '):'<small style="color:var(--m)">Link a quote to see job profit.</small>'}
 {const _ej2=editJob;editJob=function(id,fq){window._jid=id||'';_ej2(id,fq)}}
 {const _sj=saveJob;saveJob=function(id){const before=D.jobs.length;const keep=ja.slice(),own=isOwner()&&!!$('#jact');
  const _save=save;let jobRef=null;save=function(){if(own){jobRef=id?J(id):D.jobs[D.jobs.length-1];if(jobRef){jobRef.actual=keep.filter(a=>a.partId||a.desc);jobRef.actual.forEach(a=>{const p=P(a.partId);if(p&&(!p.lastDate||a.date>=p.lastDate)){p.lastCost=+a.cost;p.lastDate=a.date}})}}_save()};
@@ -1263,6 +1281,11 @@ body.cpwait #syncst{animation:cpblink 1s infinite}@keyframes cpblink{50%{opacity
 #cptoast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:9999;box-shadow:0 4px 14px #0004;max-width:90vw;text-align:center}
 #cpupd{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:9998;background:#111;color:#fff;border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 20px #0005;font-size:14px}
 #cpupd button{background:var(--b);color:#fff;border:0;border-radius:8px;padding:8px 12px;font-weight:700}
+.pcbox{margin-top:12px;border-top:1px solid var(--l);padding-top:10px}.pchead{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.pctog{display:none}.pctog button{border:1px solid var(--l);background:#fff;padding:5px 14px;font-size:14px;border-radius:0}.pctog button:first-child{border-radius:8px 0 0 8px}.pctog button:last-child{border-radius:0 8px 8px 0}.pctog button.on{background:var(--b);color:#fff;border-color:var(--b)}
+.pct td.n,.pct th.n{text-align:right;white-space:nowrap}.pct .pctot td{border-top:2px solid var(--l)}
+.pcsum{display:flex;gap:10px;flex-wrap:wrap;background:#f3fbf6;border:1px solid #bfe5cc;border-radius:8px;padding:8px 10px;margin:8px 0 4px}.pcsum>div{flex:1 1 40%;font-size:13px}
+@media (max-width:600px){.pctog{display:flex}.pcv-cost .pcr{display:none}.pcv-retail .pcc{display:none}}
 </style>
 <script>
 /* While the saved screen is showing and we are still connecting, let people look around
