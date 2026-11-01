@@ -136,7 +136,11 @@ window.getD=()=>D;window.setD=x=>{D=x;localStorage.setItem(K,JSON.stringify(D))}
 window.setDSoon=x=>{D=x;clearTimeout(setDSoon.t);setDSoon.t=setTimeout(setDSoon.flush,500)};setDSoon.flush=()=>{clearTimeout(setDSoon.t);setDSoon.t=0;localStorage.setItem(K,JSON.stringify(D))};
 addEventListener('pagehide',()=>{if(setDSoon.t)setDSoon.flush()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&setDSoon.t)setDSoon.flush()});
 window.rerenderSoon=()=>{if(rerenderSoon.t)return;rerenderSoon.t=setTimeout(()=>{rerenderSoon.t=0;rerender()},document.body.classList.contains('cpwait')?700:80)};
-const W=id=>D.workers.find(x=>x.id==id),C=id=>D.clients.find(x=>x.id==id),Q=id=>D.quotes.find(x=>x.id==id),J=id=>D.jobs.find(x=>x.id==id);
+/* fast lookups: an id->position index per list, always re-checked against the live list so it can never return a stale or deleted item */
+const _ix=new WeakMap();function byId(a,id){if(!a||id==null||id==='')return a&&a.find(x=>x.id==id);let m=_ix.get(a);if(!m||m.n!==a.length){m=new Map();m.n=a.length;a.forEach((x,i)=>{if(x&&!m.has(String(x.id)))m.set(String(x.id),i)});_ix.set(a,m)}const i=m.get(String(id));const x=i!=null?a[i]:null;if(x&&x.id==id)return x;_ix.delete(a);return a.find(x=>x.id==id)}
+/* during one render only: time entries grouped by job (render never edits time entries) */
+let _tjOn=0,_tj=null;function jobTimes(id){if(!_tjOn)return D.time.filter(t=>isJobT(t)&&t.job==id);if(!_tj||_tj.a!==D.time){_tj={a:D.time,m:new Map()};D.time.forEach(t=>{if(isJobT(t)){const k=String(t.job);let l=_tj.m.get(k);if(!l)_tj.m.set(k,l=[]);l.push(t)}})}return _tj.m.get(String(id))||[]}
+const W=id=>byId(D.workers,id),C=id=>byId(D.clients,id),Q=id=>byId(D.quotes,id),J=id=>byId(D.jobs,id);
 function seed(){const S=true,now=new Date(),day=n=>{const d=new Date(now);d.setDate(d.getDate()+n);return d};
  const w1={id:uid(),name:'Sample - Mike Torres',rate:32,sample:S},w2={id:uid(),name:'Sample - Dana Kealoha',rate:28,sample:S};D.workers.push(w1,w2);
  const c1={id:uid(),name:'Sample - Smith Residence',phone:'(308) 555-0142',address:'412 G St, Central City, NE',email:'',sample:S},c2={id:uid(),name:'Sample - Main St Diner',phone:'(308) 555-0199',address:'1601 17th St, Central City, NE',email:'',sample:S};D.clients.push(c1,c2);
@@ -149,9 +153,11 @@ function seed(){const S=true,now=new Date(),day=n=>{const d=new Date(now);d.setD
 function clearSample(){if(!confirm('Remove all sample data?'))return;['workers','clients','quotes','jobs','time'].forEach(k=>D[k]=D[k].filter(x=>!x.sample));save();render()}
 const tag=x=>x&&x.sample?'<span class="sample">SAMPLE</span>':'';
 const qTotals=q=>{const sub=q.items.reduce((s,i)=>s+(+i.qty||0)*(+i.price||0),0),taxable=q.items.filter(i=>i.type=='part').reduce((s,i)=>s+i.qty*i.price,0);const tax=sub*(+q.tax||0)/100;return{sub,tax,total:sub+tax}};
-const jobHours=id=>D.time.filter(t=>isJobT(t)&&t.job==id).reduce((s,t)=>s+hrs(t),0);
+const jobHours=id=>jobTimes(id).reduce((s,t)=>s+hrs(t),0);
 var cname=id=>{const c=C(id);return c?esc(c.name):'<i>—</i>'};
-function render(){if(!D.settings.company||D.settings.company=='Your Plumbing Co.')D.settings.company='Central Plumbing';if(!D.settings.phone)D.settings.phone='308-390-8535';$('#cname').innerHTML='<img src="logo-mono-white.png" alt="" class="hlogo">'+esc(D.settings.company);$('#today').textContent=new Date().toDateString();
+/* while the page is still loading, the add-on scripts below each ask for a redraw; skip those and draw once when loading is done */
+window.__boot=1;window.__bootPending=0;addEventListener('DOMContentLoaded',()=>{if(window.__boot){window.__boot=0;if(window.__bootPending)render()}});
+function render(){if(window.__boot){window.__bootPending=1;return}if(!D.settings.company||D.settings.company=='Your Plumbing Co.')D.settings.company='Central Plumbing';if(!D.settings.phone)D.settings.phone='308-390-8535';$('#cname').innerHTML='<img src="logo-mono-white.png" alt="" class="hlogo">'+esc(D.settings.company);$('#today').textContent=new Date().toDateString();
  $('#nav').innerHTML=TABS.map(([k,v])=>`<button class="${k==tab?'on':''}" onclick="go('${k}')">${v}</button>`).join('');$('#app').innerHTML=(V[tab]||V.dash)()}
 function go(t){tab=t;view=null;render();scrollTo(0,0)}
 function modal(h){$('#modal').innerHTML=h?`<div class="modal" onclick="if(event.target==this)modal()"><div>${h}</div></div>`:''}
@@ -243,14 +249,14 @@ function norm(x){if(!x)return x;['workers','clients','quotes','jobs','time','par
 norm(D);
 
 {const _setD=window.setD;window.setD=x=>_setD(norm(x))}
-const P=id=>D.parts.find(x=>x.id==id),T=id=>D.templates.find(x=>x.id==id);
+const P=id=>byId(D.parts,id),T=id=>D.templates.find(x=>x.id==id);
 const sell=p=>p?(+p.sell>0?+p.sell:(+p.cost||0)*(1+(+p.markup||0)/100)):0;
 const wCost=w=>w?(+w.cost>0?+w.cost:(+w.rate||0)):0;
 const laborCostRate=()=>+D.settings.laborCost>0?+D.settings.laborCost:(D.workers.length?D.workers.reduce((s,w)=>s+wCost(w),0)/D.workers.length:0);
 const pct=(p,c)=>p?((p-c)/p*100).toFixed(1)+'%':'—';
 const profitBox=(price,cost,lbl='')=>`<div class="card noprint" style="background:#f3fbf6;border-color:#bfe5cc"><b>${lbl}Profit (owner only)</b><div class="row" style="margin-top:6px"><div>Price<br><b>${money(price)}</b></div><div>Cost<br><b>${money(cost)}</b></div><div>Profit<br><b style="color:${price-cost<0?'#c0392b':'#1e8e4e'}">${money(price-cost)}</b></div><div>Margin<br><b>${pct(price,cost)}</b></div></div></div>`;
 function quoteCost(q){const lc=laborCostRate();return (q.items||[]).reduce((s,i)=>s+(i.type=='part'?(+i.qty||0)*(i.cost!=null?+i.cost:(P(i.partId)?+P(i.partId).cost||0:0)):i.type=='labor'?(+i.qty||0)*lc:0),0)}
-function jobFin(j){const q=Q(j.quote);const price=q?qTotals(q).sub:0;const lab=D.time.filter(t=>isJobT(t)&&t.job==j.id).reduce((s,t)=>s+hrs(t)*wCost(W(t.worker)),0);
+function jobFin(j){const q=Q(j.quote);const price=q?qTotals(q).sub:0;const lab=jobTimes(j.id).reduce((s,t)=>s+hrs(t)*wCost(W(t.worker)),0);
  const act=(j.actual||[]).reduce((s,a)=>s+(+a.qty||0)*(+a.cost||0),0);const estParts=q?q.items.filter(i=>i.type=='part').reduce((s,i)=>s+(+i.qty||0)*(+i.cost||0),0):0;
  const parts=(j.actual||[]).length?act:estParts;return{price,lab,parts,cost:lab+parts,partsEst:!(j.actual||[]).length&&estParts>0}}
 
@@ -1032,6 +1038,7 @@ function dayClockRow(w){const d=dayOpen(w),r=jobOpen(w),me=w==myWorkerId();const
  ${jl.length||jo.length?`<select id="dcj_${w}" style="width:auto;max-width:170px" data-tip="Pick a job to start its job clock"><option value="">Start a job…</option>${jo.length?'<optgroup label="Assigned">':''}${jl.map(jOpt).join('')}${jo.length?'</optgroup><optgroup label="Other open jobs">'+jo.map(jOpt).join('')+'</optgroup>':''}</select><button class="btn sm s" data-tip="Start the job clock on the picked job" onclick="const v=$('#dcj_${w}').value;if(v)jobStart('${w}',v)">▶ Start</button>`:''}</div></div>`}
 function dayClockCard(){const own=isOwner(),me=myWorkerId();const ws=own?D.workers.map(w=>w.id):me?[me]:[];if(!ws.length)return '';return `<div class="card noprint dcc"><h2 style="margin:0 0 6px;font-size:17px" data-tip="Day clock = your paid shift. Job clock = time on one job, billed to the customer.">${own?'Crew clock':'My clock'}</h2>${ws.map(dayClockRow).join('')}</div>`}
 {const _r=render;render=function(){try{jcMigrate()}catch(e){}return _r()}}
+{const _r2=render;render=function(){_tjOn++;_tj=null;try{return _r2()}finally{if(!--_tjOn)_tj=null}}}
 {const _vc=V.cal;V.cal=()=>dayClockCard()+_vc()}
 V.clock=()=>dayClockCard()+`<div class="card"><h2>Recent entries</h2>${timeTable(D.time.filter(t=>isOwner()||t.worker==myWorkerId()).sort((a,b)=>b.in.localeCompare(a.in)).slice(0,20))}<button class="btn s" onclick="editTime()">+ Manual entry</button></div>`;
 techDash=function(){const me=myWorkerId(),t=tod(),mine=D.jobs.filter(j=>(j.workers||[]).includes(me)||isTech());const today=mine.filter(j=>(j.when||'').slice(0,10)==t),up=mine.filter(j=>(j.when||'').slice(0,10)>t&&j.status!='Paid').sort((a,b)=>a.when.localeCompare(b.when)).slice(0,10);
@@ -1261,7 +1268,7 @@ body.cpwait #syncst{animation:cpblink 1s infinite}@keyframes cpblink{50%{opacity
    (bottom bar, tabs, Done lists) but hold taps that would change something. */
 function cpToast(t){let e=document.getElementById('cptoast');if(!e){e=document.createElement('div');e.id='cptoast';document.body.appendChild(e)}e.textContent=t;clearTimeout(cpToast.t);cpToast.t=setTimeout(()=>e.remove(),1800)}
 document.addEventListener('click',e=>{if(!document.body.classList.contains('cpwait'))return;const t=e.target;
-  if(t.closest('#bnav,.subseg,.subbar,.morelist,summary,#auth'))return;
+  if(t.closest('#bnav,.subseg,.subbar,.morelist,summary,#auth,#cpupd'))return;
   if(t.closest('button,input,select,textarea,a,label,[onclick]')){e.preventDefault();e.stopPropagation();cpToast('One sec, still connecting…')}},true);
 document.addEventListener('focusin',e=>{if(document.body.classList.contains('cpwait')&&e.target.matches('input,select,textarea')&&!e.target.closest('#auth')){e.target.blur();cpToast('One sec, still connecting…')}},true);
 /* Offline-ready app shell (sw.js). A new version is saved in the background; we offer it here and
@@ -1298,13 +1305,14 @@ const $=s=>document.querySelector(s), body=$('#authbody'), st=$('#syncst');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 /* Fast launch: if this device was signed in last time, show the saved screen right away while
    sign-in and live data load in the background. Taps that would change data wait until connected. */
+window.__boot=0;
 const SESS='cp-session';let fast=null;
 try{fast=JSON.parse(localStorage.getItem(SESS)||'null')}catch(e){}
 if(fast&&fast.email&&fast.role&&localStorage.getItem(K)&&!firebaseConfig.apiKey.startsWith('PASTE')){
   window.userEmail=fast.email;window.userRole=fast.role;window.userWorkerId=fast.workerId||null;
   $('#auth').style.display='none';document.body.classList.add('cpwait');st.textContent='● connecting…';
   try{render()}catch(e){console.warn(e)}
-}else fast=null;
+}else{fast=null;if(window.__bootPending)try{render()}catch(e){console.warn(e)}}
 const endWait=()=>{if(!document.body.classList.contains('cpwait'))return;document.body.classList.remove('cpwait');if(rerenderSoon.t){clearTimeout(rerenderSoon.t);rerenderSoon.t=0;rerender()}};
 if(firebaseConfig.apiKey.startsWith('PASTE')){
   body.innerHTML=`<p><b>Live sync is not configured yet.</b></p><p style="color:var(--m);font-size:14px">Paste your Firebase config into <code>index.html</code> (see SETUP.md). Until then you can keep using the app on this device only.</p><button class="btn" id="offline">Use offline on this device</button>`;
