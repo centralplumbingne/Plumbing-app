@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Central Plumbing</title>
-<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#111111"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Central Plumbing"><link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin><link rel="preconnect" href="https://firestore.googleapis.com"><link rel="preconnect" href="https://identitytoolkit.googleapis.com"><link rel="preconnect" href="https://securetoken.googleapis.com"><link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js" crossorigin><link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js" crossorigin><link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js" crossorigin><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#111111"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Central Plumbing"><link rel="apple-touch-icon" href="icon-180.png">
 <style>
 :root{--b:#D7262E;--bd:#111;--bg:#f4f4f5;--c:#fff;--t:#1d2733;--m:#66768a;--l:#dde3ea}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--t)}
@@ -120,7 +120,7 @@ const K='plumbingAppData_v1';const TABS=[['dash','Dashboard'],['clock','Time Clo
 const JS=['Scheduled','In Progress','Completed','Invoiced','Paid'],QS=['Draft','Sent','Approved','Declined'];
 let D,tab='dash',view=null;const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,10);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money=n=>'$'+(+n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const MONEYF=new Intl.NumberFormat(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});const money=n=>'$'+MONEYF.format(+n||0); // one shared formatter: toLocaleString made a new one per call (slow on big lists)
 const ymd=d=>{d=new Date(d);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const dtl=d=>{d=new Date(d);return ymd(d)+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
 const hrsX=e=>((e.out?new Date(e.out):new Date())-new Date(e.in))/36e5; // exact hours (clock times are stored exactly)
@@ -132,6 +132,10 @@ function blank(){return{settings:{company:'Central Plumbing',rate:95,fee:89,tax:
 function load(){try{D=JSON.parse(localStorage.getItem(K))}catch(e){}if(!D){D=blank()}}
 function save(){localStorage.setItem(K,JSON.stringify(D));if(window.cloudSave)window.cloudSave()}
 window.getD=()=>D;window.setD=x=>{D=x;localStorage.setItem(K,JSON.stringify(D))};window.rerender=()=>{if(!$('#modal').innerHTML)render();else window._pendingRender=true};
+// live updates arrive in bursts (one per list); save to the device and redraw once per burst instead of every time
+window.setDSoon=x=>{D=x;clearTimeout(setDSoon.t);setDSoon.t=setTimeout(setDSoon.flush,500)};setDSoon.flush=()=>{clearTimeout(setDSoon.t);setDSoon.t=0;localStorage.setItem(K,JSON.stringify(D))};
+addEventListener('pagehide',()=>{if(setDSoon.t)setDSoon.flush()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&setDSoon.t)setDSoon.flush()});
+window.rerenderSoon=()=>{if(rerenderSoon.t)return;rerenderSoon.t=setTimeout(()=>{rerenderSoon.t=0;rerender()},document.body.classList.contains('cpwait')?700:80)};
 const W=id=>D.workers.find(x=>x.id==id),C=id=>D.clients.find(x=>x.id==id),Q=id=>D.quotes.find(x=>x.id==id),J=id=>D.jobs.find(x=>x.id==id);
 function seed(){const S=true,now=new Date(),day=n=>{const d=new Date(now);d.setDate(d.getDate()+n);return d};
  const w1={id:uid(),name:'Sample - Mike Torres',rate:32,sample:S},w2={id:uid(),name:'Sample - Dana Kealoha',rate:28,sample:S};D.workers.push(w1,w2);
@@ -1246,6 +1250,30 @@ if(typeof G_OWNER!='undefined')G_OWNER.push(['Notes (owners only)',['Tap Notes i
 /* nav: owners get a Notes button */
 {const _r=render;render=function(){if(tab=='onotes'&&!isOwner()){tab='dash'}const r=_r();if(!window.cpNotes&&isOwner()&&!render._onl){render._onl=1;onLocalRefresh()}return r}}
 </script>
+<style>
+body.cpwait #syncst{animation:cpblink 1s infinite}@keyframes cpblink{50%{opacity:.4}}
+#cptoast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:9999;box-shadow:0 4px 14px #0004;max-width:90vw;text-align:center}
+#cpupd{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:9998;background:#111;color:#fff;border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 20px #0005;font-size:14px}
+#cpupd button{background:var(--b);color:#fff;border:0;border-radius:8px;padding:8px 12px;font-weight:700}
+</style>
+<script>
+/* While the saved screen is showing and we are still connecting, let people look around
+   (bottom bar, tabs, Done lists) but hold taps that would change something. */
+function cpToast(t){let e=document.getElementById('cptoast');if(!e){e=document.createElement('div');e.id='cptoast';document.body.appendChild(e)}e.textContent=t;clearTimeout(cpToast.t);cpToast.t=setTimeout(()=>e.remove(),1800)}
+document.addEventListener('click',e=>{if(!document.body.classList.contains('cpwait'))return;const t=e.target;
+  if(t.closest('#bnav,.subseg,.subbar,.morelist,summary,#auth'))return;
+  if(t.closest('button,input,select,textarea,a,label,[onclick]')){e.preventDefault();e.stopPropagation();cpToast('One sec, still connecting…')}},true);
+document.addEventListener('focusin',e=>{if(document.body.classList.contains('cpwait')&&e.target.matches('input,select,textarea')&&!e.target.closest('#auth')){e.target.blur();cpToast('One sec, still connecting…')}},true);
+/* Offline-ready app shell (sw.js). A new version is saved in the background; we offer it here and
+   it is used automatically the next time the app is opened. */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message',e=>{if(!e.data||e.data.type!=='cp-update'||document.getElementById('cpupd'))return;
+    document.body.insertAdjacentHTML('beforeend','<div id="cpupd" class="noprint"><span style="flex:1">A new version of the app is ready.</span><button onclick="location.reload()">Update</button><button style="background:#333" onclick="this.parentNode.remove()">Later</button></div>')});
+  const reg=()=>navigator.serviceWorker.register('sw.js',{scope:'./'}).then(r=>{r.update&&r.update().catch(()=>{});
+    const c=navigator.serviceWorker.controller;if(c)c.postMessage({type:'cp-ask',since:Date.now()-performance.now()})}).catch(e=>console.warn('sw',e));
+  if(document.readyState==='complete')setTimeout(reg,1500);else addEventListener('load',()=>setTimeout(reg,1500));
+}
+</script>
 <script type="module">
 /* ================================================================
    FIREBASE CONFIG — paste your config from Firebase Console here
@@ -1268,6 +1296,16 @@ const TECHW={time:{f:'email',del:false},notes:{f:'by',del:false},leads:{f:'by',d
 const SCHEMA=2;
 const $=s=>document.querySelector(s), body=$('#authbody'), st=$('#syncst');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* Fast launch: if this device was signed in last time, show the saved screen right away while
+   sign-in and live data load in the background. Taps that would change data wait until connected. */
+const SESS='cp-session';let fast=null;
+try{fast=JSON.parse(localStorage.getItem(SESS)||'null')}catch(e){}
+if(fast&&fast.email&&fast.role&&localStorage.getItem(K)&&!firebaseConfig.apiKey.startsWith('PASTE')){
+  window.userEmail=fast.email;window.userRole=fast.role;window.userWorkerId=fast.workerId||null;
+  $('#auth').style.display='none';document.body.classList.add('cpwait');st.textContent='● connecting…';
+  try{render()}catch(e){console.warn(e)}
+}else fast=null;
+const endWait=()=>{if(!document.body.classList.contains('cpwait'))return;document.body.classList.remove('cpwait');if(rerenderSoon.t){clearTimeout(rerenderSoon.t);rerenderSoon.t=0;rerender()}};
 if(firebaseConfig.apiKey.startsWith('PASTE')){
   body.innerHTML=`<p><b>Live sync is not configured yet.</b></p><p style="color:var(--m);font-size:14px">Paste your Firebase config into <code>index.html</code> (see SETUP.md). Until then you can keep using the app on this device only.</p><button class="btn" id="offline">Use offline on this device</button>`;
   $('#offline').onclick=()=>{$('#auth').style.display='none'};
@@ -1275,17 +1313,17 @@ if(firebaseConfig.apiKey.startsWith('PASTE')){
 
 async function start(){
   const V='10.12.2', base=`https://www.gstatic.com/firebasejs/${V}/`;
-  const {initializeApp}=await import(base+'firebase-app.js');
-  const A=await import(base+'firebase-auth.js');
-  const F=await import(base+'firebase-firestore.js');
-  const app=initializeApp(firebaseConfig), auth=A.getAuth(app);
+  const [{initializeApp},A,F]=await Promise.all([import(base+'firebase-app.js'),import(base+'firebase-auth.js'),import(base+'firebase-firestore.js')]);
+  const app=initializeApp(firebaseConfig);
+  // email + password only: skip the Google popup/redirect helper (saves an iframe and ~40 KB on every launch). Same saved sign-in as before.
+  let auth;try{auth=A.initializeAuth(app,{persistence:[A.indexedDBLocalPersistence,A.browserLocalPersistence]})}catch(e){auth=A.getAuth(app)}
   let db; try{db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})})}catch(e){db=F.getFirestore(app)}
   const co=F.doc(db,'companies',COMPANY), metaRef=F.doc(co,'settings','main'), pubRef=F.doc(co,'settings','public');
   let unsubs=[], last={}, applying=false, ready=false, role=null, me='';
   const pubM={}, privM={};
 
   function showLogin(msg='',ok=false){
-    $('#auth').style.display='flex';$('#signout').style.display='none';st.textContent='';
+    endWait();$('#auth').style.display='flex';$('#signout').style.display='none';st.textContent='';
     body.innerHTML=`<label>Email</label><input id="ae" type="email" autocomplete="username"><label>Password</label><input id="ap" type="password" autocomplete="current-password"><div style="margin-top:14px"><button class="btn" id="ain">Sign in</button></div><div style="margin-top:10px"><a id="areset">Forgot password? Send reset email</a></div><div class="amsg ${ok?'ok':''}" id="amsg">${esc(msg)}</div>`;
     const go=async()=>{try{$('#amsg').textContent='Signing in…';await A.signInWithEmailAndPassword(auth,$('#ae').value.trim(),$('#ap').value)}catch(e){$('#amsg').className='amsg';$('#amsg').textContent=nice(e)}};
     $('#ain').onclick=go;$('#ap').onkeydown=e=>{if(e.key=='Enter')go()};
@@ -1293,7 +1331,7 @@ async function start(){
       try{await A.sendPasswordResetEmail(auth,e);$('#amsg').className='amsg ok';$('#amsg').textContent='Reset email sent — check your inbox.'}catch(x){$('#amsg').textContent=nice(x)}};
   }
   const nice=e=>({'auth/invalid-credential':'Wrong email or password.','auth/wrong-password':'Wrong email or password.','auth/user-not-found':'No account with that email.','auth/invalid-email':'That email looks wrong.','auth/too-many-requests':'Too many tries — wait a bit and try again.','permission-denied':'This account is not allowed to do that.'}[e.code]||e.message);
-  $('#signout').onclick=async()=>{await A.signOut(auth);localStorage.removeItem(K);setD(norm(blank()));window.photoStore=window.localPhotoStore;render()};
+  $('#signout').onclick=async()=>{localStorage.removeItem(SESS);fast=null;await A.signOut(auth);localStorage.removeItem(K);setD(norm(blank()));window.photoStore=window.localPhotoStore;render()};
 
   const stable=o=>JSON.stringify(o,(k,v)=>v&&typeof v=='object'&&!Array.isArray(v)?Object.keys(v).sort().reduce((a,x)=>(a[x]=v[x],a),{}):v);
   const clean=o=>JSON.parse(JSON.stringify(o)); // strips undefined (Firestore rejects it)
@@ -1326,12 +1364,15 @@ async function start(){
   window.cloudSave=()=>push();
 
   function compose(k){const D=getD();D[k]=Object.keys(pubM[k]||{}).map(id=>Object.assign({},pubM[k][id],(privM[k]||{})[id]||{}));last[k]={};D[k].forEach(x=>last[k][x.id]=stable(x));return D}
-  function listenCol(k,q,isPriv){unsubs.push(F.onSnapshot(q,{includeMetadataChanges:true},s=>{const M={};s.docs.forEach(d=>M[d.id]=d.data());(isPriv?privM:pubM)[k]=M;apply(compose(k),s)},err))}
+  let waitSrv=new Set(),srvN=0;
+  const srvMark=id=>s=>{if(!s.metadata.fromCache&&waitSrv.delete(id)&&!waitSrv.size&&role)endWait()};
+  const srvReg=()=>{const id=++srvN;waitSrv.add(id);return srvMark(id)};
+  function listenCol(k,q,isPriv){const mk=srvReg();unsubs.push(F.onSnapshot(q,{includeMetadataChanges:true},s=>{mk(s);const M={};s.docs.forEach(d=>M[d.id]=d.data());(isPriv?privM:pubM)[k]=M;apply(compose(k),s)},err))}
   function listen(){
-    unsubs.forEach(u=>u());unsubs=[];
+    unsubs.forEach(u=>u());unsubs=[];waitSrv=new Set();
     if(role==='owner'){
       for(const k in SPEC){listenCol(k,F.collection(co,SPEC[k].c));if(SPEC[k].priv)listenCol(k,F.collection(co,SPEC[k].c+'_private'),true)}
-      unsubs.push(F.onSnapshot(metaRef,{includeMetadataChanges:true},s=>{if(!s.exists())return;const D=getD(),m=s.data();if(m.settings)D.settings=m.settings;if(m.seq)D.seq=Object.assign({i:1001},m.seq);last.meta=stable(meta(D));apply(D,s)},err));
+      const mm=srvReg();unsubs.push(F.onSnapshot(metaRef,{includeMetadataChanges:true},s=>{mm(s);if(!s.exists())return;const D=getD(),m=s.data();if(m.settings)D.settings=m.settings;if(m.seq)D.seq=Object.assign({i:1001},m.seq);last.meta=stable(meta(D));apply(D,s)},err));
     }else if(role==='billing'){ // read-only hours: all time entries, worker names, and job number + customer name only
       listenCol('workers',F.collection(co,'workers'));
       listenCol('time',F.collection(co,'timeEntries'));
@@ -1347,8 +1388,8 @@ async function start(){
       unsubs.push(F.onSnapshot(pubRef,s=>{if(!s.exists())return;const D=getD();Object.assign(D.settings,s.data());apply(D,s)},err));
     }
   }
-  function apply(D,s){applying=true;setD(D);applying=false;st.textContent=s.metadata.fromCache?'● offline (cached)':(s.metadata.hasPendingWrites?'● syncing…':'● live');rerender();$('#cname').innerHTML='<img src="logo-mono-white.png" alt="" class="hlogo">'+esc(!D.settings.company||D.settings.company=='Your Plumbing Co.'?'Central Plumbing':D.settings.company)}
-  function err(e){st.textContent='⚠ '+nice(e);console.warn(e);if(e.code=='permission-denied'&&role!=='owner'){alert('Access problem: '+nice(e));A.signOut(auth)}}
+  function apply(D,s){applying=true;setDSoon(D);applying=false;st.textContent=s.metadata.fromCache?'● offline (cached)':(s.metadata.hasPendingWrites?'● syncing…':'● live');rerenderSoon();$('#cname').innerHTML='<img src="logo-mono-white.png" alt="" class="hlogo">'+esc(!D.settings.company||D.settings.company=='Your Plumbing Co.'?'Central Plumbing':D.settings.company)}
+  function err(e){endWait();st.textContent='⚠ '+nice(e);console.warn(e);if(e.code=='permission-denied'&&role!=='owner'){alert('Access problem: '+nice(e));A.signOut(auth)}}
 
   // Firestore-backed photo store: photos/{id} (meta) + photos/{id}/chunks/{n} (base64 pieces < 1MB each)
   const CH=700000;
@@ -1360,23 +1401,30 @@ async function start(){
     async del(p){const wb=F.writeBatch(db);for(let i=0;i<(p.n||1);i++)wb.delete(F.doc(co,'photos',p.id,'chunks',String(i)));wb.delete(F.doc(co,'photos',p.id));await wb.commit()}
   };
 
-  async function loadAllOwner(){const D=norm(blank());let any=false;
-    for(const k in SPEC){const pub=await F.getDocs(F.collection(co,SPEC[k].c));let priv={};if(SPEC[k].priv){(await F.getDocs(F.collection(co,SPEC[k].c+'_private'))).docs.forEach(d=>priv[d.id]=d.data())}
-      D[k]=pub.docs.map(d=>Object.assign({},d.data(),priv[d.id]||{}));if(pub.size)any=true}
-    try{const bj=await F.getDocs(F.collection(co,'billingJobs'));last.bj={};bj.docs.forEach(d=>last.bj[d.id]=stable(d.data()))}catch(e){}
-    const ms=await F.getDoc(metaRef);if(ms.exists()){any=true;const m=ms.data();if(m.settings)D.settings=m.settings;if(m.seq)D.seq=Object.assign({i:1001},m.seq)}
-    return {D,empty:!any,schema:ms.exists()?(ms.data().schema||1):0}}
+  // fromCache=true: read this device's saved copy (instant). Otherwise read from the server.
+  async function loadAllOwner(fromCache=false){const D=norm(blank());let any=false;const GD=fromCache?F.getDocsFromCache:F.getDocs,G1=fromCache?(r=>F.getDocFromCache(r).catch(()=>null)):F.getDoc;
+    // all collections at once (was one after another: ~20 round trips in a row)
+    const ks=Object.keys(SPEC);
+    const [cols,bj,ms]=await Promise.all([
+      Promise.all(ks.map(k=>Promise.all([GD(F.collection(co,SPEC[k].c)),SPEC[k].priv?GD(F.collection(co,SPEC[k].c+'_private')):null]))),
+      GD(F.collection(co,'billingJobs')).catch(()=>null),
+      G1(metaRef)]);
+    ks.forEach((k,i)=>{const [pub,pv]=cols[i];const priv={};if(pv)pv.docs.forEach(d=>priv[d.id]=d.data());
+      D[k]=pub.docs.map(d=>Object.assign({},d.data(),priv[d.id]||{}));if(pub.size)any=true});
+    if(bj){last.bj={};bj.docs.forEach(d=>last.bj[d.id]=stable(d.data()))}if(ms&&ms.exists()){any=true;const m=ms.data();if(m.settings)D.settings=m.settings;if(m.seq)D.seq=Object.assign({i:1001},m.seq)}
+    return {D,empty:!any,schema:ms&&ms.exists()?(ms.data().schema||1):0}}
 
   A.onAuthStateChanged(auth,async u=>{
     unsubs.forEach(x=>x());unsubs=[];ready=false;role=null;
     window.userEmail=u?u.email:null;window.userRole=null;window.userWorkerId=null;
     window.cpPush=null;window.cpNotes=null;
-    if(!u){window.photoStore=window.localPhotoStore;showLogin();return}
+    if(!u){window.photoStore=window.localPhotoStore;if(fast){fast=null;localStorage.removeItem(SESS);setD(norm(blank()));render()}showLogin();return}
     me=u.email.toLowerCase();body.innerHTML='<p style="color:var(--m)">Loading company data…</p>';
     try{
       let workerId=null;if((window.OWNER_LIST||[]).includes(me))role='owner';
       try{const ud=await F.getDoc(F.doc(co,'users',me));if(ud.exists()){const x=ud.data();if(!role)role=x.role==='owner'?'owner':x.role==='billing'?'billing':'tech';workerId=x.workerId||null}}catch(e){if(!role)throw e}
       if(!role){showLogin('This account ('+u.email+') is not on the team. Ask an owner to add you in Team.');await A.signOut(auth);return}
+      if(fast&&(fast.email!==me||fast.role!==role)){fast=null;setD(norm(blank()))} // saved screen was for someone else / another role: drop it
       window.userRole=role;window.userWorkerId=workerId;window.photoStore=fsPhotos;
       const subId=async ep=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(ep)))).slice(0,20).map(b=>b.toString(16).padStart(2,'0')).join('');
       window.cpPush={ // device subscriptions: companies/main/pushSubs/{hash(endpoint)}; prefs: companies/main/pushPrefs/{email}
@@ -1392,7 +1440,10 @@ async function start(){
         window.cpNotes={async add(n){const {id,...x}=n;await F.setDoc(F.doc(NC,id),x)},async update(id,p){await F.updateDoc(F.doc(NC,id),p)},async del(id){await F.deleteDoc(F.doc(NC,id))}};
       }
       if(role==='owner'){
-        const r=await loadAllOwner();
+        // Fast launch: start from this device's saved copy (the listeners below then bring it up to date).
+        // First sign-in on a device, an empty cache, or a pending data upgrade still read from the server.
+        let r=null;if(fast){try{r=await loadAllOwner(true);if(r.empty||r.schema<SCHEMA)r=null}catch(e){r=null}}
+        if(!r)r=await loadAllOwner(false);
         if(r.empty){const D=getD(),n=Object.keys(SPEC).reduce((a,k)=>a+(D[k]||[]).filter(x=>!x.sample).length,0);
           if(n&&!confirm(`The shared company account is empty.\n\nUpload the ${n} record(s) saved on this device so everyone can see them?\n\nOK = upload  ·  Cancel = start fresh`)){const b=norm(blank());b.settings=D.settings;setD(b)}
           derive();await push(true);
@@ -1400,9 +1451,12 @@ async function start(){
           if(r.schema<SCHEMA){st.textContent='● upgrading data…';await push(true)} // migration: split private fields out of public docs, add techEmails etc.
         }
         ready=true;await push();window.onDataReady&&window.onDataReady();
-      }else{setD(norm(blank()));ready=true}
+      }else{if(!fast)setD(norm(blank()));ready=true} // keep the saved screen until live data arrives
       listen();window.onUserChange&&window.onUserChange();
       $('#auth').style.display='none';$('#signout').style.display='';$('#signout').title=u.email+' ('+role+')';
+      localStorage.setItem(SESS,JSON.stringify({email:me,role,workerId}));
+      if(role!=='owner'||!waitSrv.size)endWait(); // owners: wait until every list is live from the server (so a change is never made on old data)
+      rerender();
     }catch(e){console.warn(e);if(e.code=='permission-denied'){showLogin('This account ('+u.email+') is not allowed to access company data.');A.signOut(auth)}else showLogin('Error: '+nice(e))}
   });
 }
