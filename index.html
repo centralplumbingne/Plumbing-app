@@ -1089,7 +1089,7 @@ render();
 /* ===================== PUSH NOTIFICATIONS (Web Push, VAPID) ===================== */
 const VAPID_PUBLIC='BOovCGs1wlE4p2sxpkUnSK2SjOoj3dQqBrnGZx8BidfEuS7owS-HLiBd4LbE5p8FgdXlQ-jUPSDwimiW_h7zK60';
 // Alert types. Edit labels/defaults here (keep the keys in sync with functions/lib/alerts.js).
-const NOTIF_TECH=[['assigned','You were put on a new job',true],['changed','Your job\'s date or time changed',true],['remind30','Reminder 30 minutes before your job',true],['clockout7','Still clocked in for the day at 7 PM',true]];
+const NOTIF_TECH=[['assigned','You were put on a new job',true],['changed','Your job\'s date or time changed',true],['remind30','Reminders 1 hour and 30 minutes before your job (not for 8 AM starts)',true],['clockout7','Still clocked in for the day at 7 PM',true]];
 const NOTIF_OWNER=[['dayClock','A worker clocks in or out for the day',true],['jobClock','A worker starts or stops a job',true],['completed','A job is marked Completed',true],['notes','A tech adds a field note or lead',true],['orders','Someone adds to a job\'s Need to order list',true],['noteRemind','A "Remind me" you set on a note comes due',true]];
 const nIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const nStandalone=()=>window.matchMedia&&matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
