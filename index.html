@@ -128,10 +128,10 @@ const hrs=e=>Math.round(Math.max(0,(e.out?new Date(e.out):new Date())-new Date(e
 const hmx=h=>{const m=Math.round(Math.max(0,h)*60);return Math.floor(m/60)+':'+String(m%60).padStart(2,'0')};
 const hx=h=>`<small class="hx" title="Exact clock time (h:mm). Hours are rounded to the nearest 15 min.">${hmx(h)}</small>`;const fmtDT=d=>d?new Date(d).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
 function weekStart(d){d=new Date(d);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
-function blank(){return{settings:{company:'Central Plumbing',rate:95,fee:89,tax:7.5,phone:'308-390-8535',email:''},workers:[],clients:[],quotes:[],jobs:[],time:[],parts:[],templates:[],invoices:[],recurring:[],checklistTemplates:[],users:[],notes:[],leads:[],messages:[],priceImports:[],seq:{q:1001,j:1001,i:1001}}}
+function blank(){return{settings:{company:'Central Plumbing',rate:95,fee:89,tax:7.5,phone:'308-390-8535',email:''},workers:[],clients:[],quotes:[],jobs:[],time:[],parts:[],templates:[],invoices:[],recurring:[],checklistTemplates:[],users:[],notes:[],leads:[],messages:[],priceImports:[],orders:[],seq:{q:1001,j:1001,i:1001}}}
 function load(){try{D=JSON.parse(localStorage.getItem(K))}catch(e){}if(!D){D=blank()}}
 function save(){localStorage.setItem(K,JSON.stringify(D));if(window.cloudSave)window.cloudSave()}
-window.getD=()=>D;window.setD=x=>{D=x;localStorage.setItem(K,JSON.stringify(D))};window.rerender=()=>{if(!$('#modal').innerHTML)render();else window._pendingRender=true};
+window.getD=()=>D;window.setD=x=>{D=x;localStorage.setItem(K,JSON.stringify(D))};window.rerender=()=>{if(!$('#modal').innerHTML)render();else{window._pendingRender=true;if($('#olist')&&!window._ordEdit&&typeof drawOrd=='function')drawOrd()}};
 // live updates arrive in bursts (one per list); save to the device and redraw once per burst instead of every time
 window.setDSoon=x=>{D=x;clearTimeout(setDSoon.t);setDSoon.t=setTimeout(setDSoon.flush,500)};setDSoon.flush=()=>{clearTimeout(setDSoon.t);setDSoon.t=0;localStorage.setItem(K,JSON.stringify(D))};
 addEventListener('pagehide',()=>{if(setDSoon.t)setDSoon.flush()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&setDSoon.t)setDSoon.flush()});
@@ -246,7 +246,7 @@ load();render();setInterval(()=>{if(!$('#modal').innerHTML&&(tab=='clock'||tab==
 /* ===== Price book, parts catalog & profit (owner-only cost data) ===== */
 const OWNER_EMAILS=['cdbonser@gmail.com','thecentralplumber@gmail.com'];
 const isOwner=()=>window.userRole?window.userRole==='owner':(!window.userEmail||OWNER_EMAILS.includes(String(window.userEmail).toLowerCase())); // offline/unconfigured = single-device owner
-function norm(x){if(!x)return x;['workers','clients','quotes','jobs','time','parts','templates','invoices','recurring','checklistTemplates','users','notes','leads','messages','priceImports'].forEach(k=>{if(!Array.isArray(x[k]))x[k]=[]});x.seq=Object.assign({q:1001,j:1001,i:1001},x.seq||{});x.settings=x.settings||blank().settings;return x}
+function norm(x){if(!x)return x;['workers','clients','quotes','jobs','time','parts','templates','invoices','recurring','checklistTemplates','users','notes','leads','messages','priceImports','orders'].forEach(k=>{if(!Array.isArray(x[k]))x[k]=[]});x.seq=Object.assign({q:1001,j:1001,i:1001},x.seq||{});x.settings=x.settings||blank().settings;return x}
 norm(D);
 
 {const _setD=window.setD;window.setD=x=>_setD(norm(x))}
@@ -1090,7 +1090,7 @@ render();
 const VAPID_PUBLIC='BOovCGs1wlE4p2sxpkUnSK2SjOoj3dQqBrnGZx8BidfEuS7owS-HLiBd4LbE5p8FgdXlQ-jUPSDwimiW_h7zK60';
 // Alert types. Edit labels/defaults here (keep the keys in sync with functions/lib/alerts.js).
 const NOTIF_TECH=[['assigned','You were put on a new job',true],['changed','Your job\'s date or time changed',true],['remind30','Reminder 30 minutes before your job',true],['clockout7','Still clocked in for the day at 7 PM',true]];
-const NOTIF_OWNER=[['dayClock','A worker clocks in or out for the day',true],['jobClock','A worker starts or stops a job',true],['completed','A job is marked Completed',true],['notes','A tech adds a field note or lead',true],['noteRemind','A "Remind me" you set on a note comes due',true]];
+const NOTIF_OWNER=[['dayClock','A worker clocks in or out for the day',true],['jobClock','A worker starts or stops a job',true],['completed','A job is marked Completed',true],['notes','A tech adds a field note or lead',true],['orders','Someone adds to a job\'s Need to order list',true],['noteRemind','A "Remind me" you set on a note comes due',true]];
 const nIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const nStandalone=()=>window.matchMedia&&matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const nCan=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
@@ -1307,6 +1307,53 @@ if('serviceWorker' in navigator){
   if(document.readyState==='complete')setTimeout(reg,1500);else addEventListener('load',()=>setTimeout(reg,1500));
 }
 </script>
+<script>
+/* ===================== Need to order (per job; techs add, owners order) =====================
+   orderItems/{id}: jobId, text, qty, note, by, byName, at, status open|ordered|received, orderedBy/At, receivedBy/At, techEmails.
+   NO prices or costs on these items, ever. Billing never loads them. */
+{const _d=derive;derive=function(){_d();if(isOwner())D.orders.forEach(o=>{const j=J(o.jobId);if(j)o.techEmails=(j.techEmails||[]).slice()})}}
+const ordWho=()=>W(myWorkerId())?.name||({'cdbonser@gmail.com':'Colt','thecentralplumber@gmail.com':'Dad'})[ME()]||ME()||'Owner';
+const ordOpenN=()=>(D.orders||[]).filter(o=>o.status=='open'&&J(o.jobId)).length;
+const ordSt={open:['Need to order','#c0392b'],ordered:['Ordered','#b9770e'],received:['Received','#1e8e4e']};
+function ordCanEdit(o){return isOwner()||(o.by===ME()&&o.status=='open')}
+function ordRow(o,showJob){const st=ordSt[o.status]||ordSt.open,ed=window._ordEdit==o.id;
+ if(ed)return `<div class="ordi"><div class="row" style="align-items:center"><input id="oe_t" style="flex:3" value="${esc(o.text)}"><input id="oe_q" style="flex:0 0 70px;min-width:0" type="number" min="0" step="1" placeholder="Qty" value="${esc(o.qty??'')}"></div><input id="oe_n" placeholder="Note (optional)" value="${esc(o.note||'')}" style="margin-top:4px"><div style="margin-top:4px;display:flex;gap:6px"><button class="btn sm" onclick="ordSaveEdit('${o.id}')">Save</button><button class="btn sm s" onclick="window._ordEdit='';ordRedraw()">Cancel</button></div></div>`;
+ const acts=[];if(isOwner()){if(o.status=='open')acts.push(`<button class="btn sm" onclick="ordSet('${o.id}','ordered')">Mark ordered</button>`);if(o.status=='ordered')acts.push(`<button class="btn sm g" onclick="ordSet('${o.id}','received')">Received</button>`);if(o.status!='open')acts.push(`<button class="btn sm s" onclick="ordSet('${o.id}','open')" title="Put back on the list">Undo</button>`)}
+ if(ordCanEdit(o)&&o.status=='open')acts.push(`<button class="btn sm s" onclick="window._ordEdit='${o.id}';ordRedraw()">Edit</button>`);
+ if(ordCanEdit(o))acts.push(`<button class="btn sm d" onclick="ordDel('${o.id}')">Delete</button>`);
+ return `<div class="ordi ords-${o.status}"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="flex:1;min-width:140px">${o.qty?`<span class="ordq">${esc(o.qty)}×</span> `:''}${esc(o.text)}</b><span class="ordst" style="color:${st[1]}">${st[0]}</span></div>${o.note?`<div style="font-size:13px;white-space:pre-wrap">${esc(o.note)}</div>`:''}
+ <div style="font-size:12px;color:var(--m)">Added by ${esc(o.byName||o.by)} · ${fmtDT(o.at)}${o.orderedAt?` · ordered by ${esc(o.orderedByName||o.orderedBy)} ${fmtDT(o.orderedAt)}`:''}${o.receivedAt?` · received ${fmtDT(o.receivedAt)}`:''}</div>${acts.length?`<div class="ordact">${acts.join('')}</div>`:''}</div>`}
+const ordSort=(a,b)=>({open:0,ordered:1,received:2}[a.status]-{open:0,ordered:1,received:2}[b.status])||String(b.at).localeCompare(String(a.at));
+function ordBox(j){return `<div class="noprint ordbox" style="margin-top:12px;border-top:1px solid var(--l);padding-top:10px"><h3 style="font-size:15px;margin:0 0 6px">🛒 Need to order <small style="color:var(--m);font-weight:400">(the office sees this list)</small></h3><div id="olist" data-job="${j.id}"></div>
+ <div class="row" style="align-items:center;margin-top:6px"><input id="ot" style="flex:3" placeholder="What do we need? (part, size, brand)" onkeydown="if(event.key=='Enter')ordAdd('${j.id}')"><input id="oq" style="flex:0 0 70px;min-width:0" type="number" min="0" step="1" placeholder="Qty"></div><div class="row" style="align-items:center;margin-top:4px"><input id="on" style="flex:3" placeholder="Note (optional)"><button class="btn sm" style="flex:0" onclick="ordAdd('${j.id}')">Add to list</button></div></div>`}
+function drawOrd(jid){const el=$('#olist');if(!el)return;jid=jid||el.dataset.job;const L=(D.orders||[]).filter(o=>o.jobId==jid).sort(ordSort);el.innerHTML=L.map(o=>ordRow(o)).join('')||'<small style="color:var(--m)">Nothing on the list for this job.</small>'}
+function ordRedraw(){if($('#olist'))drawOrd();else if(tab=='orders')render()}
+function ordAdd(jid){const t=$('#ot').value.trim();if(!t)return;const j=J(jid);if(!j)return;const q=$('#oq').value;const te=(j.techEmails||[]).slice();if(isTech()&&!te.includes(ME()))return alert('You can only add to jobs you are on.');
+ D.orders.push({id:uid()+uid(),jobId:jid,text:t.slice(0,200),qty:q===''?null:Math.max(0,Math.round(+q)),note:$('#on').value.trim().slice(0,300),by:ME(),byName:ordWho(),at:new Date().toISOString(),status:'open',techEmails:te});
+ save();$('#ot').value='';$('#oq').value='';$('#on').value='';drawOrd(jid);if(typeof cpNote=='function')cpNote('Added to the Need to order list ✔')}
+function ordSaveEdit(id){const o=D.orders.find(x=>x.id==id);if(!o||!ordCanEdit(o)||o.status!='open')return;const t=$('#oe_t').value.trim();if(!t)return;const q=$('#oe_q').value;o.text=t.slice(0,200);o.qty=q===''?null:Math.max(0,Math.round(+q));o.note=$('#oe_n').value.trim().slice(0,300);window._ordEdit='';save();ordRedraw()}
+function ordDel(id){const i=D.orders.findIndex(x=>x.id==id);if(i<0||!ordCanEdit(D.orders[i]))return;if(!confirm('Remove this item from the list?'))return;D.orders.splice(i,1);save();ordRedraw()}
+function ordSet(id,st){if(!isOwner())return;const o=D.orders.find(x=>x.id==id);if(!o)return;const now=new Date().toISOString();o.status=st;
+ if(st=='ordered'){o.orderedBy=ME();o.orderedByName=ordWho();o.orderedAt=now}if(st=='received'){o.receivedBy=ME();o.receivedAt=now;if(!o.orderedAt){o.orderedBy=ME();o.orderedByName=ordWho();o.orderedAt=now}}
+ if(st=='open'){delete o.orderedBy;delete o.orderedByName;delete o.orderedAt;delete o.receivedBy;delete o.receivedAt}save();ordRedraw()}
+{const _je=jobExtras;jobExtras=function(j){const h=_je(j);if(isBilling()||!j||!j.id)return h;setTimeout(()=>drawOrd(j.id),0);return h+ordBox(j)}}
+/* owners: combined list, grouped by job */
+V.orders=()=>{if(!isOwner())return '';const L=(D.orders||[]).filter(o=>J(o.jobId));const by={};L.forEach(o=>(by[o.jobId]=by[o.jobId]||[]).push(o));
+ const groups=Object.entries(by).map(([jid,a])=>({j:J(jid),a:a.sort(ordSort),open:a.filter(o=>o.status=='open').length,ord:a.filter(o=>o.status=='ordered').length,last:a.reduce((m,o)=>o.at>m?o.at:m,'')})).sort((x,y)=>(y.open>0)-(x.open>0)||(y.ord>0)-(x.ord>0)||y.last.localeCompare(x.last));
+ const act=groups.filter(g=>g.open||g.ord),done=groups.filter(g=>!g.open&&!g.ord);
+ const G=g=>`<div class="card ordg"><div class="ordjh" onclick="editJob('${g.j.id}')"><b>${esc(g.j.num)}</b> · ${esc(noSample(g.j.clientName||C(g.j.client)?.name||''))}${g.open?` <span class="ordbdg">${g.open} to order</span>`:''}${g.ord?` <span class="ordbdg o">${g.ord} ordered</span>`:''}<div style="font-size:13px;color:var(--m)">${esc(g.j.clientAddress||C(g.j.client)?.address||'')}</div></div>${g.a.map(o=>ordRow(o,1)).join('')}</div>`;
+ return `<div class="card"><h2 style="margin:0">🛒 Need to order</h2><div style="color:var(--m);font-size:14px">Items the crew added on their jobs. Open items first. Tap a job to open it.</div></div>${act.map(G).join('')||'<div class="card" style="color:var(--m)">Nothing to order right now.</div>'}${done.length?`<details class="card"><summary>Received (${done.reduce((n,g)=>n+g.a.length,0)} items)</summary>${done.map(G).join('')}</details>`:''}`};
+{const _js=GROUPS.jobs.subs;GROUPS.jobs.subs=()=>isOwner()?[['jobs','Jobs'],['orders','To order'+(ordOpenN()?' ('+ordOpenN()+')':'')]]:_js()}
+{const _vd=V.dash;V.dash=()=>{const h=_vd();if(!isOwner())return h;const n=ordOpenN();return (n?`<div class="card ordhome" onclick="go('orders')"><b>🛒 ${n} item${n>1?'s':''} to order</b> <span style="color:var(--m)">from the crew · tap to see the list ›</span></div>`:'')+h}}
+{const _r=render;render=function(){if(tab=='orders'&&!isOwner())tab='dash';const r=_r();if($('#olist')&&!window._ordEdit)drawOrd();return r}}
+</script>
+<style>
+.ordi{border:1px solid var(--l);border-radius:8px;padding:8px 10px;margin:6px 0;background:#fff}.ords-ordered{background:#fffaf0}.ords-received{background:#f5f5f5;opacity:.85}
+.ordst{font-size:12px;font-weight:700;white-space:nowrap}.ordq{color:var(--b)}.ordact{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.ordjh{cursor:pointer;margin-bottom:4px}.ordbdg{background:#c0392b;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:700;white-space:nowrap}.ordbdg.o{background:#b9770e}
+.ordhome{cursor:pointer;border-left:4px solid #c0392b}
+@media (min-width:700px){.ordg{}.ordi{display:block}}
+</style>
 <script type="module">
 /* ================================================================
    FIREBASE CONFIG — paste your config from Firebase Console here
@@ -1323,9 +1370,9 @@ const firebaseConfig = {
 /* ================================================================ */
 const COMPANY='main';
 // D key -> Firestore collection. priv = fields moved to an owner-only "<collection>_private" doc
-const SPEC={clients:{c:'clients'},workers:{c:'workers',priv:['rate','cost']},jobs:{c:'jobs',priv:['actual']},quotes:{c:'quotes'},time:{c:'timeEntries'},parts:{c:'parts'},templates:{c:'templates'},invoices:{c:'invoices'},recurring:{c:'recurring'},checklistTemplates:{c:'checklistTemplates'},users:{c:'users'},notes:{c:'notes'},leads:{c:'leads'},messages:{c:'messages'},priceImports:{c:'priceImports'}};
+const SPEC={clients:{c:'clients'},workers:{c:'workers',priv:['rate','cost']},jobs:{c:'jobs',priv:['actual']},quotes:{c:'quotes'},time:{c:'timeEntries'},parts:{c:'parts'},templates:{c:'templates'},invoices:{c:'invoices'},recurring:{c:'recurring'},checklistTemplates:{c:'checklistTemplates'},users:{c:'users'},notes:{c:'notes'},leads:{c:'leads'},messages:{c:'messages'},priceImports:{c:'priceImports'},orders:{c:'orderItems'}};
 // what techs may write: collection -> owner field that must equal their email, and whether they may delete
-const TECHW={time:{f:'email',del:false},notes:{f:'by',del:false},leads:{f:'by',del:false}};
+const TECHW={time:{f:'email',del:false},notes:{f:'by',del:false},leads:{f:'by',del:false},orders:{f:'by',del:true}};
 const SCHEMA=2;
 const $=s=>document.querySelector(s), body=$('#authbody'), st=$('#syncst');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1419,6 +1466,7 @@ async function start(){
       listenCol('checklistTemplates',F.collection(co,'checklistTemplates'));
       listenCol('notes',F.query(F.collection(co,'notes'),F.where('techEmails','array-contains',me)));
       listenCol('leads',F.query(F.collection(co,'leads'),F.where('by','==',me)));
+      listenCol('orders',F.query(F.collection(co,'orderItems'),F.where('techEmails','array-contains',me)));
       unsubs.push(F.onSnapshot(pubRef,s=>{if(!s.exists())return;const D=getD();Object.assign(D.settings,s.data());apply(D,s)},err));
     }
   }
