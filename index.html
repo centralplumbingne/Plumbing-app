@@ -664,7 +664,7 @@ const MSG1={id:'msg-2026-10-10-call',title:'Voice call with Lil Plumber - Sat Oc
 
 ## Go-live notes
 - Back up first.
-- Keep Dad's app closed during the first owner sign-in.
+- Keep Mark's app closed during the first owner sign-in.
 - Then publish the new security rules.
 
 ## Colt's decisions
@@ -1274,7 +1274,7 @@ function jobUnsched(id){const j=J(id);if(!j||!isOwner())return;if(!confirm('Move
 </script>
 <script>
 /* ===================== Owner notes (private by default, shareable between owners) ===================== */
-const ONAME={'cdbonser@gmail.com':'Colt','thecentralplumber@gmail.com':'Dad'};
+const ONAME={'cdbonser@gmail.com':'Colt','thecentralplumber@gmail.com':'Mark'};
 const oName=e=>ONAME[String(e||'').toLowerCase()]||String(e||'').split('@')[0]||'?';
 let ON={mine:[],shared:[]},onEdit='',onDoneOpen=false;
 const ONL='cp-ownernotes-local';
@@ -1381,7 +1381,7 @@ if('serviceWorker' in navigator){
    orderItems/{id}: jobId, text, qty, note, by, byName, at, status open|ordered|received, orderedBy/At, receivedBy/At, techEmails.
    NO prices or costs on these items, ever. Billing never loads them. */
 {const _d=derive;derive=function(){_d();if(isOwner())D.orders.forEach(o=>{const j=J(o.jobId);if(j)o.techEmails=(j.techEmails||[]).slice()})}}
-const ordWho=()=>W(myWorkerId())?.name||({'cdbonser@gmail.com':'Colt','thecentralplumber@gmail.com':'Dad'})[ME()]||ME()||'Owner';
+const ordWho=()=>W(myWorkerId())?.name||({'cdbonser@gmail.com':'Colt','thecentralplumber@gmail.com':'Mark'})[ME()]||ME()||'Owner';
 const ordOpenN=()=>(D.orders||[]).filter(o=>o.status=='open'&&J(o.jobId)).length;
 const ordSt={open:['Need to order','#c0392b'],ordered:['Ordered','#b9770e'],received:['Received','#1e8e4e']};
 function ordCanEdit(o){return isOwner()||(o.by===ME()&&o.status=='open')}
@@ -1564,6 +1564,31 @@ V.restock=()=>{if(!isOwner())return '';const L=(D.jobs||[]).filter(j=>(j.restock
   +(op.length?op.map(G).join(''):'<div class="card" style="color:var(--m)">Nothing to restock right now.</div>')+(dn.length?`<details class="card"><summary>Restocked (${dn.length} job${dn.length>1?'s':''})</summary>${dn.map(G).join('')}</details>`:'')};
 {const _js=GROUPS.jobs.subs;GROUPS.jobs.subs=()=>{const a=_js();if(!isOwner())return a;const n=rsOpenN();return a.concat([['restock','Restock'+(n?' ('+n+')':'')]])}}
 
+/* ---------- timelock: one open day clock per worker + per-worker "Can add/edit own time" ----------
+   workers/{id}.timeEdit (default on). Off = that tech only clocks in/out with the buttons; the Firestore rules enforce it too. */
+const tmHM=s=>new Date(s).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+
+function tCanEdit(w){return isOwner()||W(w||myWorkerId())?.timeEdit!==false}
+function dayBusyMsg(w,d){return (w==myWorkerId()?"You're":wWho(w)+' is')+' already clocked in for the day since '+tmHM(d.in)+'.'}
+{const _tn=tNew;tNew=function(w,kind,job){if(kind=='day'){const d=dayOpen(w);if(d)return d}return _tn(w,kind,job)}}
+{const _di=dayIn;dayIn=function(w){const d=canClock(w)&&dayOpen(w);if(d)return cpNote(dayBusyMsg(w,d));return _di(w)}}
+{const _et=editTime;editTime=function(id,wk){if(!tCanEdit())return;return _et(id,wk)}}
+{const _ep=editParts;editParts=function(ids){if(!tCanEdit())return;return _ep(ids)}}
+{const _st=saveTime;saveTime=function(id){if(!tCanEdit()){modal();return}
+ const i=$('#ti')?.value,o=$('#to')?.value,k=$('#tk')?$('#tk').value:'day';
+ if(i&&k!='job'){const w=isOwner()?$('#tw').value:myWorkerId(),a0=+new Date(i),a1=o?+new Date(o):Infinity,me=w==myWorkerId();
+  const hit=D.time.filter(t=>t.id!=id&&t.worker==w&&isDayT(t)&&t.in&&+new Date(t.in)<a1&&(t.out?+new Date(t.out):Date.now())>a0).sort((a,b)=>a.in.localeCompare(b.in))[0];
+  if(hit)return alert(hit.out?(me?'You':wWho(w))+' already have day time '+tmHM(hit.in)+'–'+tmHM(hit.out)+' on '+new Date(hit.in).toLocaleDateString('en-US',{month:'short',day:'numeric'})+' that overlaps this entry. Change the times, or edit that entry instead.'
+   :dayBusyMsg(w,hit)+' Clock out first, or change the times so they don\'t overlap.')}
+ return _st(id)}}
+const tStripEdit=h=>tCanEdit()?h:h.replace(/<button[^>]*onclick="(?:editTime|editParts)\([^"]*\)"[^>]*>[^<]*<\/button>/g,'');
+{const _tt=timeTable;timeTable=L=>tStripEdit(_tt(L))}
+{const _c=V.clock;V.clock=()=>{const h=tStripEdit(_c());return h}}
+{const _s=V.sheets;V.sheets=()=>tStripEdit(_s())}
+function setTimeEdit(id,on){const w=W(id);if(!w||!isOwner())return;w.timeEdit=!!on;save();render();cpNote((noSample(w.name)||'Worker')+(on?' can add and edit their own time again.':' can now only clock in and out. You can still fix their time.'))}
+{const _vw=V.workers;V.workers=()=>{const h=_vw();if(!isOwner())return h;
+ return h+`<div class="card" id="tperm"><h2>Time permissions</h2><p style="color:var(--m);margin:0 0 8px">Off = that tech can only clock in and out with the buttons. They can't add hours by hand or change times. Owners can always fix time.</p>${D.workers.map(w=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--b,#eee)"><div style="flex:1">${wChip(w.id)||esc(w.name)}</div><div style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="te_${w.id}" style="width:auto" ${w.timeEdit!==false?'checked':''} onchange="setTimeEdit('${w.id}',this.checked)"><span onclick="const c=document.getElementById('te_${w.id}');c.checked=!c.checked;setTimeEdit('${w.id}',c.checked)">Can add/edit own time</span></div></div>`).join('')}</div>`}}
+
 </script>
 <style>.finbar{background:#eef8f0;border:1px solid #cde8d3;border-radius:10px;padding:10px 12px;margin:8px 0 10px;display:flex;flex-direction:column;gap:6px}.finbar.done{background:#f4f6f8;border-color:#e1e5ea}.finbtn{background:#1e8e3e!important;font-size:17px;padding:12px}.pill.rdy{background:#fff3cd;color:#7a5a00}.rdyrow{display:flex;gap:10px;align-items:center;border-top:1px solid #eee;padding:8px 0}.rdycard{border-left:4px solid #1e8e3e}</style>
 <script type="module">
@@ -1612,6 +1637,7 @@ async function start(){
   let auth;try{auth=A.initializeAuth(app,{persistence:[A.indexedDBLocalPersistence,A.browserLocalPersistence]})}catch(e){auth=A.getAuth(app)}
   let db; try{db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})})}catch(e){db=F.getFirestore(app)}
   const co=F.doc(db,'companies',COMPANY), metaRef=F.doc(co,'settings','main'), pubRef=F.doc(co,'settings','public');
+  let noteUnsubs=[]; // owner-notes listeners live outside unsubs (listen() resets unsubs)
   let unsubs=[], last={}, applying=false, ready=false, role=null, me='';
   const pubM={}, privM={};
 
@@ -1711,7 +1737,7 @@ async function start(){
     return {D,empty:!any,schema:ms&&ms.exists()?(ms.data().schema||1):0}}
 
   A.onAuthStateChanged(auth,async u=>{
-    unsubs.forEach(x=>x());unsubs=[];ready=false;role=null;
+    unsubs.forEach(x=>x());unsubs=[];noteUnsubs.forEach(x=>x());noteUnsubs=[];ready=false;role=null;
     window.userEmail=u?u.email:null;window.userRole=null;window.userWorkerId=null;
     window.cpPush=null;window.cpNotes=null;
     if(!u){window.photoStore=window.localPhotoStore;if(fast){fast=null;localStorage.removeItem(SESS);setD(norm(blank()));render()}showLogin();return}
@@ -1732,7 +1758,7 @@ async function start(){
       window.cpNotes=null;
       if(role==='owner'){ // owner notes: companies/main/ownerNotes, private unless shared (see firestore.rules)
         const NC=F.collection(co,'ownerNotes');const got={mine:[],shared:[]};const emit=()=>window.onNotesData&&window.onNotesData(got.mine,got.shared);
-        const sub=(k,q)=>unsubs.push(F.onSnapshot(q,s=>{got[k]=s.docs.map(d=>({id:d.id,...d.data()}));emit()},e=>console.warn('notes',k,e)));
+        const sub=(k,q)=>noteUnsubs.push(F.onSnapshot(q,s=>{got[k]=s.docs.map(d=>({id:d.id,...d.data()}));emit()},e=>console.warn('notes',k,e)));
         sub('mine',F.query(NC,F.where('by','==',me)));sub('shared',F.query(NC,F.where('shared','==',true)));
         window.cpNotes={async add(n){const {id,...x}=n;await F.setDoc(F.doc(NC,id),x)},async update(id,p){await F.updateDoc(F.doc(NC,id),p)},async del(id){await F.deleteDoc(F.doc(NC,id))}};
       }
