@@ -91,6 +91,17 @@ main{padding-bottom:calc(90px + env(safe-area-inset-bottom))}
 .pimain{flex:1;min-width:0}.pid{font-weight:700}.pis{font-size:12.5px;color:var(--m)}.pinum{text-align:right;white-space:nowrap;font-size:14px}.pct{font-weight:700;color:#555}.pct.big{color:#D7262E}.pmatch{background:#e6f4ea;color:#1e7a3e;font-weight:700;padding:0 5px;border-radius:4px}.pnew{background:#e8f0fe;color:#1a56c4;font-weight:700;padding:0 5px;border-radius:4px}.pimap summary{cursor:pointer;font-weight:600;margin:6px 0}
 .nban{display:flex;gap:12px;align-items:flex-start;position:relative;border-left:5px solid #D7262E}.nban .nx{position:absolute;top:6px;right:8px;background:none;border:0;font-size:16px;color:var(--m);cursor:pointer}.nban .btn{margin-top:8px}.nwarn{background:#fff4e5;border-left:5px solid #f0a020;padding:10px 12px;border-radius:8px;font-size:14.5px;line-height:1.45}.nwarn ol{margin:6px 0 0;padding-left:20px}.nstat{font-weight:700;margin-bottom:10px;color:var(--m)}.nstat.on{color:#1e7a3e}.nbig{font-size:18px;padding:14px 18px;width:100%}.nrow{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--l);font-weight:400;margin:0}.nrow input{width:22px;height:22px;flex:0 0 auto}
 .hx{display:inline-block;margin-left:4px;font-size:11px;color:#8a8f98;font-weight:400}.bhw h3{font-size:14px;margin:12px 0 4px;color:var(--m)}.bhtot{display:flex;gap:10px}.bhtot>div{flex:1;background:#f6f7f9;border-radius:10px;padding:8px 10px}.bhtot span{display:block;font-size:12px;color:var(--m)}.bhtot b{font-size:22px}.bht{width:100%}.bht td,.bht th{padding:6px 5px;font-size:13.5px;vertical-align:top}.bht .r{text-align:right;white-space:nowrap}.bht small{color:var(--m)}.bhnone{color:var(--m);font-size:13px}.printonly{display:none}@media print{.printonly{display:block}}
+#jsq::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.fcsheet h3{margin:14px 0 2px;font-size:17px}.fcjob{font-weight:600;color:#3d4550;margin:2px 0 4px}.fchint{color:var(--m);display:block}
+.fcsec{border-top:1px solid #e3e6ea;padding-top:4px}.fcadd{display:flex;gap:6px;margin-top:6px}.fcadd input{min-width:0}.fcadd input[list]{flex:1}.fcadd input[type=number]{width:64px;flex:0 0 64px}
+.fcnone{display:flex;gap:8px;align-items:center;margin:8px 0 2px;font-weight:600}.fcnone input{width:20px;height:20px}
+.fcit{display:flex;justify-content:space-between;align-items:center;background:#f3f5f7;border-radius:8px;padding:8px 10px;margin-top:6px}.fcx{border:0;background:#e1e4e8;border-radius:50%;width:28px;height:28px;cursor:pointer}
+.fcwarn{background:#fff4e0;border:1px solid #f0c36d;border-radius:8px;padding:10px;font-weight:600;margin:6px 0}.fcth{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.fct{width:56px;height:56px;border-radius:6px;background:#dde center/cover}
+.fcgal{display:block;text-align:center;margin:6px 0 0;color:var(--t)}#fc_sr{width:100%;box-sizing:border-box;margin-top:4px}
+.fcfoot{border-top:1px solid #e3e6ea;margin-top:14px;padding-top:10px;display:flex;flex-direction:column;gap:8px}.fcfoot .btn{width:100%}#fc_go:disabled{opacity:.45}
+.finbar{margin-top:16px;border-top:1px solid #e3e6ea;padding-top:12px}.finbar .finbtn{width:100%;display:block}
+.rsit{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid #eef0f2}.rsit input{width:22px;height:22px;margin-top:2px}.rsit.done span{color:var(--m);text-decoration:line-through}
+@media print{.tw{overflow:visible!important}.bhw{break-inside:auto}.bht tr{break-inside:avoid}#modal{display:none!important}}
 </style></head><body>
 <header><h1 id="cname"><img src="logo-mono-white.png" alt="" class="hlogo">Central Plumbing</h1><span style="font-size:12px;opacity:.8" id="today"></span><span id="syncst"></span><button class="btn s sm noprint" id="signout" style="display:none">Sign out</button></header>
 <div class="auth" id="auth"><div><div style="text-align:center;margin-bottom:12px"><img src="logo.png" alt="Central Plumbing" style="width:190px;max-width:70%"></div><div id="authbody"><p style="color:var(--m)">Loading…</p></div></div></div>
@@ -169,12 +180,12 @@ V.dash=()=>{const t=ymd(new Date()),ws=weekStart(new Date());const open=D.jobs.f
  return `<div class="grid"><div class="card stat"><div class="n">${open.length}</div><div class="k">Open jobs</div></div><div class="card stat"><div class="n">${today.length}</div><div class="k">Jobs today</div></div><div class="card stat"><div class="n">${wh.toFixed(1)}</div><div class="k">Hours this week</div></div><div class="card stat"><div class="n">${money(pt)}</div><div class="k">Pending quotes (${pend.length})</div></div></div>
  <div class="card"><h2>Today's jobs</h2>${jobTable(today)}</div><div class="card"><h2>On the clock now</h2>${on.length?on.map(e=>`<div>${esc(W(e.worker)?.name)} — since ${fmtDT(e.in)} ${e.job?'· '+esc(jName(J(e.job))):''}</div>`).join(''):'<span style="color:var(--m)">Nobody clocked in.</span>'}</div>
  <div class="card noprint"><button class="btn" onclick="go('quotes');editQuote()">+ New quote</button><button class="btn" onclick="go('jobs');editJob()">+ New job</button><button class="btn s" onclick="go('clock')">Time clock</button></div>`};
-function jobTable(list){if(!list.length)return '<span style="color:var(--m)">No jobs.</span>';return `<div class="tw"><table><tr><th>Customer / job</th><th>Address</th><th>When</th><th>Workers</th><th>Status</th><th>Hours</th><th></th></tr>${list.sort((a,b)=>(a.when||'').localeCompare(b.when||'')||byJobNum(a,b)).map(j=>`<tr><td><b>${esc(jCust(j))}</b>${jNo(j)}${tag(j)}<br><small>${esc(j.desc)}</small>${jcBar(j)}</td><td><small>${esc(j.clientAddress||C(j.client)?.address||'')}</small></td><td>${fmtDT(j.when)}</td><td>${wChips(j.workers)}</td><td><span class="pill ${j.status}">${j.status}</span></td><td>${jobHours(j.id).toFixed(1)}</td><td><button class="btn sm s" onclick="editJob('${j.id}')">Open</button></td></tr>`).join('')}</table></div>`}
+function jobTable(list){if(!list.length)return '<span style="color:var(--m)">No jobs.</span>';return `<div class="tw"><table><tr><th>Customer / job</th><th>Address</th><th>When</th><th>Workers</th><th>Status</th><th>Hours</th><th></th></tr>${list.sort((a,b)=>(a.when||'').localeCompare(b.when||'')||byJobNum(a,b)).map(j=>`<tr><td><b>${esc(jCust(j))}</b>${jNo(j)}${tag(j)}${rdyB(j)}<br><small>${esc(j.desc)}</small>${jcBar(j)}</td><td><small>${esc(j.clientAddress||C(j.client)?.address||'')}</small></td><td>${fmtDT(j.when)}</td><td>${wChips(j.workers)}</td><td><span class="pill ${j.status}">${j.status}</span></td><td>${jobHours(j.id).toFixed(1)}</td><td><button class="btn sm s" onclick="editJob('${j.id}')">Open</button></td></tr>`).join('')}</table></div>`}
 let jf={status:'',worker:'',range:'all',date:'',q:''};
 V.jobs=()=>{let L=D.jobs.slice();const t=ymd(new Date()),ws=weekStart(new Date()),we=new Date(ws);we.setDate(we.getDate()+7);
- if(jf.q){const q=jf.q.trim().toLowerCase();L=L.filter(j=>[j.num,jCust(j),j.desc,j.clientAddress,C(j.client)?.address].join(' ').toLowerCase().includes(q))}if(jf.status)L=L.filter(j=>j.status==jf.status);if(jf.worker)L=L.filter(j=>j.workers.includes(jf.worker));
- if(jf.range=='today')L=L.filter(j=>j.when&&j.when.slice(0,10)==t);if(jf.range=='week')L=L.filter(j=>j.when&&new Date(j.when)>=ws&&new Date(j.when)<we);if(jf.date)L=L.filter(j=>j.when&&j.when.slice(0,10)==jf.date);
- return `<div class="card"><div class="row" style="align-items:end"><div style="flex:2 1 220px"><label>Search</label><input type="search" placeholder="Customer, job, address or J-number" value="${esc(jf.q||'')}" onchange="jf.q=this.value;render()"></div><div><label>Status</label><select onchange="jf.status=this.value;render()">${opt(JS.map(s=>[s,s]),jf.status,'All')}</select></div><div><label>Worker</label><select onchange="jf.worker=this.value;render()">${opt(D.workers.map(w=>[w.id,w.name]),jf.worker,'All')}</select></div><div><label>View</label><select onchange="jf.range=this.value;render()">${opt([['all','All dates'],['today','Today'],['week','This week'],['unsched','Unscheduled']],jf.range)}</select></div><div><label>Date</label><input type="date" value="${jf.date}" onchange="jf.date=this.value;render()"></div><div style="flex:0"><button class="btn" onclick="editJob()">+ Job</button></div></div></div><div class="card">${jobTable(L)}</div>`};
+ if(jf.q&&jf.q.trim())L=L.filter(j=>jobMatch(j,jf.q));if(jf.status)L=L.filter(j=>j.status==jf.status);if(jf.worker)L=L.filter(j=>j.workers.includes(jf.worker));
+ if(jf.range=='today')L=L.filter(j=>j.when&&j.when.slice(0,10)==t);if(jf.range=='week')L=L.filter(j=>j.when&&new Date(j.when)>=ws&&new Date(j.when)<we);if(jf.date)L=L.filter(j=>j.when&&j.when.slice(0,10)==jf.date);if(jf.range=='ready')L=L.filter(jReady);
+ return jSearchBox(L.length)+`<div class="card"><div class="row" style="align-items:end"><div><label>Status</label><select onchange="jf.status=this.value;render()">${opt(JS.map(s=>[s,s]),jf.status,'All')}</select></div><div><label>Worker</label><select onchange="jf.worker=this.value;render()">${opt(D.workers.map(w=>[w.id,w.name]),jf.worker,'All')}</select></div><div><label>View</label><select onchange="jf.range=this.value;render()">${opt([['all','All dates'],['today','Today'],['week','This week'],['unsched','Unscheduled'],...(isOwner()?[['ready','Ready to invoice']]:[])],jf.range)}</select></div><div><label>Date</label><input type="date" value="${jf.date}" onchange="jf.date=this.value;render()"></div><div style="flex:0"><button class="btn" onclick="editJob()">+ Job</button></div></div></div><div class="card">${jobTable(L)}</div>`};
 function editJob(id,fromQuote){const j=id?J(id):Object.assign({id:'',num:'',client:'',desc:'',workers:[],when:'',status:'Scheduled',quote:''},fromQuote||{});
  const te=id?mergeT(D.time.filter(t=>isJobT(t)&&t.job==id)):[];
  modal(`<h2>${id?esc(jName(j))+jNo(j):'New job'}</h2>${clientPicker(j.client)}<label>Description</label><textarea id="jd" rows="2">${esc(j.desc)}</textarea>
@@ -349,7 +360,7 @@ function jprof(){try{drawPc()}catch(e){console.warn(e)}const el=$('#jprof');if(!
  return h+`<div class="card noprint"><h2>Profit report <small style="color:var(--m);font-weight:400;font-size:12px">owner only · price = linked quote subtotal (pre-tax) · cost = parts (actual, else quoted cost) + logged labor at worker cost</small></h2>
  <div class="grid"><div class="stat"><div class="n">${money(tp)}</div><div class="k">Revenue (all jobs)</div></div><div class="stat"><div class="n">${money(tc)}</div><div class="k">Cost</div></div><div class="stat"><div class="n" style="color:${tp-tc<0?'#c0392b':'#1e8e4e'}">${money(tp-tc)}</div><div class="k">Profit · ${pct(tp,tc)}</div></div></div>
  <h3 style="font-size:15px">By month</h3><div class="tw"><table><tr><th>Month</th><th>Jobs</th><th class="right">Price</th><th class="right">Cost</th><th class="right">Profit</th><th class="right">Margin</th></tr>${Object.keys(by).sort().reverse().map(m=>`<tr><td>${m}</td><td>${by[m].n}</td><td class="right">${money(by[m].p)}</td><td class="right">${money(by[m].c)}</td><td class="right">${money(by[m].p-by[m].c)}</td><td class="right">${pct(by[m].p,by[m].c)}</td></tr>`).join('')||'<tr><td colspan=6>No data yet.</td></tr>'}</table></div>
- <h3 style="font-size:15px">By job</h3><div class="tw"><table><tr><th>Job</th><th>Client</th><th class="right">Price</th><th class="right">Parts</th><th class="right">Labor</th><th class="right">Profit</th><th class="right">Margin</th></tr>${L.sort((a,b)=>(b.j.when||'').localeCompare(a.j.when||'')).map(({j,f})=>`<tr><td><a href="#" onclick="editJob('${j.id}');return false">${esc(jName(j))}</a>${jNo(j)}${tag(j)}</td><td>${cname(j.client)}</td><td class="right">${money(f.price)}</td><td class="right">${money(f.parts)}${f.partsEst?'<small> est</small>':''}</td><td class="right">${money(f.lab)}</td><td class="right">${money(f.price-f.cost)}</td><td class="right">${pct(f.price,f.cost)}</td></tr>`).join('')||'<tr><td colspan=7>No jobs yet.</td></tr>'}</table></div></div>`}}
+ <h3 style="font-size:15px">By job</h3><div class="tw"><table><tr><th>Job</th><th>Client</th><th class="right">Price</th><th class="right">Parts</th><th class="right">Labor</th><th class="right">Profit</th><th class="right">Margin</th></tr>${L.sort((a,b)=>(b.j.when||'').localeCompare(a.j.when||'')).map(({j,f})=>`<tr><td><a href="#" onclick="editJob('${j.id}');return false">${esc(jName(j))}</a>${tag(j)}</td><td>${cname(j.client)}</td><td class="right">${money(f.price)}</td><td class="right">${money(f.parts)}${f.partsEst?'<small> est</small>':''}</td><td class="right">${money(f.lab)}</td><td class="right">${money(f.price-f.cost)}</td><td class="right">${pct(f.price,f.cost)}</td></tr>`).join('')||'<tr><td colspan=7>No jobs yet.</td></tr>'}</table></div></div>`}}
 
 /* ---- Workers: optional hourly cost ---- */
 {const _vw=V.workers;V.workers=()=>{let h=_vw();if(!isOwner())return h;h=h.replace('<th>Rate</th>','<th>Rate</th><th>My cost/hr <small>(optional, for profit)</small></th>');
@@ -411,7 +422,7 @@ function jobDays(L){if(!L.length)return '<div class="card"><span style="color:va
  const grp=(k,tip)=>`<div class="card jday"><h2 style="margin:0 0 8px" data-tip="${tip}">${esc(jobDayLabel(k,t))}${n(G[k])}</h2>${jobTable(G[k])}</div>`;
  let h='';
   if(past.length||noneC.length){const c=past.reduce((a,k)=>a+G[k].length,0)+noneC.length;
-  h+=`<details class="card jearlier"${up.length||none.length?'':' open'}><summary data-tip="Tap to show or hide jobs from past days, oldest first." style="cursor:pointer;font-weight:600">Earlier <span class="pill" style="margin-left:6px">${c} job${c==1?'':'s'}</span></summary>${noneC.length?`<div class="card jday"><h2 style="margin:0 0 8px" data-tip="Finished jobs that never had a date.">No date (closed)${n(noneC)}</h2>${jobTable(noneC)}</div>`:''}${past.map(k=>grp(k,'Jobs that were scheduled for this day.')).join('')}</details>`}
+  h+=`<details class="card jearlier"${(jf.q&&jf.q.trim())||!(up.length||none.length)?' open':''}><summary data-tip="Tap to show or hide jobs from past days, oldest first." style="cursor:pointer;font-weight:600">Earlier <span class="pill" style="margin-left:6px">${c} job${c==1?'':'s'}</span></summary>${noneC.length?`<div class="card jday"><h2 style="margin:0 0 8px" data-tip="Finished jobs that never had a date.">No date (closed)${n(noneC)}</h2>${jobTable(noneC)}</div>`:''}${past.map(k=>grp(k,'Jobs that were scheduled for this day.')).join('')}</details>`}
  h+=(none.length?unschedCard(none,n):'')+up.map(k=>grp(k,k==t?'Jobs scheduled for today, earliest start first.':'Jobs scheduled for this day, earliest start first.')).join('');
  return h}
 {const _vj2=V.jobs;V.jobs=()=>{const _jt=jobTable;let cap=null;jobTable=L=>{cap=L;return '<!--JOBDAYS-->'};let h;try{h=_vj2()}finally{jobTable=_jt}
@@ -483,7 +494,7 @@ function clAdd(jid){const t=$('#jcli').value.trim();if(!t)return;const j=J(jid);
 function clAddTpl(jid){const t=D.checklistTemplates.find(x=>x.id==$('#jclt').value);if(!t)return;const j=J(jid);j.checklist=(j.checklist||[]).concat(t.items.map(s=>({t:s,done:false})));save();drawCl(jid)}
 function clDel(jid,n){const j=J(jid);j.checklist.splice(n,1);save();drawCl(jid)}
 function techJob(id){const j=J(id);if(!j)return;const c=C(j.client)||{name:j.clientName,phone:j.clientPhone,address:j.clientAddress};
- modal(`<h2>${esc(jName(j))}${jNo(j)} <span class="pill ${j.status}">${j.status}</span></h2><div class="card" style="margin:0 0 10px"><b style="font-size:17px">${esc(c.name||'—')}</b>${c.phone?`<div style="margin-top:6px">📞 <a href="tel:${telD(c.phone)}">${esc(fmtPhone(c.phone))}</a></div>`:''}${jobAddrHTML(j)}</div>
+ modal(`<h2>${esc(jName(j))} <span class="pill ${j.status}">${j.status}</span></h2><div class="card" style="margin:0 0 10px"><b style="font-size:17px">${esc(c.name||'—')}</b>${c.phone?`<div style="margin-top:6px">📞 <a href="tel:${telD(c.phone)}">${esc(fmtPhone(c.phone))}</a></div>`:''}${jobAddrHTML(j)}</div>
  <div><b>When:</b> ${fmtDT(j.when)||'—'}</div><div style="margin-top:4px"><b>Crew:</b> ${(j.workers||[]).map(w=>esc(W(w)?.name||'')).join(', ')||'—'}</div><div style="margin-top:8px;white-space:pre-wrap">${esc(j.desc)}</div>
  <label>Field notes</label><textarea id="jtn" rows="3">${esc(j.techNotes||'')}</textarea>${jobExtras(j)}<div style="margin-top:14px"><button class="btn" onclick="J('${id}').techNotes=$('#jtn').value;save();modal();render()">Save notes</button><button class="btn s" onclick="modal()">Close</button></div>`);drawCl(id);loadPhotos(id)}
 
@@ -514,7 +525,7 @@ function stopRec(id){if(!confirm('Stop this series? Future scheduled jobs from i
 /* ---------- calendar ---------- */
 let cal={v:'month',d:'',w:''};
 const calJobs=(a,b)=>D.jobs.filter(j=>j.when&&j.when.slice(0,10)>=a&&j.when.slice(0,10)<b&&(!cal.w||(j.workers||[]).includes(cal.w))).sort((x,y)=>x.when.localeCompare(y.when));
-const chip=j=>{const col=wColor((j.workers||[])[0]);return `<div class="chip" ${isOwner()?`draggable="true" ondragstart="event.dataTransfer.setData('text/plain','${j.id}')"`:''} onclick="event.stopPropagation();calTap('${j.id}')" style="border-left-color:${col};background:${col}1a"><span class="wdots">${wChips(j.workers,1)}</span><b>${new Date(j.when).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</b> ${jobClient(j)}<br><small>${isOwner()?esc(j.num)+' · ':''}${esc((j.desc||'').slice(0,40))}</small>${jcBar(j)}</div>`};
+const chip=j=>{const col=wColor((j.workers||[])[0]);return `<div class="chip" ${isOwner()?`draggable="true" ondragstart="event.dataTransfer.setData('text/plain','${j.id}')"`:''} onclick="event.stopPropagation();calTap('${j.id}')" style="border-left-color:${col};background:${col}1a"><span class="wdots">${wChips(j.workers,1)}</span><b>${new Date(j.when).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</b> ${jobClient(j)}${jNo(j)}<br><small>${esc((j.desc||'').slice(0,40))}</small>${jcBar(j)}</div>`};
 const dropAttr=(day,h)=>`data-day="${day}" `+(isOwner()?`ondragover="event.preventDefault();this.classList.add('dov')" ondragleave="this.classList.remove('dov')" ondrop="event.preventDefault();this.classList.remove('dov');calMove(event.dataTransfer.getData('text/plain'),'${day}',${h==null?'null':h})"`:'');
 V.cal=()=>{if(!cal.d)cal.d=tod();const d=cal.d;let a,b,body='',title;
  if(cal.v=='day'){a=d;b=addDays(d,1);title=new Date(d+'T00:00').toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});const L=calJobs(a,b);
@@ -529,7 +540,7 @@ V.cal=()=>{if(!cal.d)cal.d=tod();const d=cal.d;let a,b,body='',title;
  <div class="legend">${ws.map(w=>`<span><i style="background:${wColor(w.id)}"></i>${esc(w.name)}</span>`).join('')}</div>${isOwner()?'<small style="color:var(--m)">Drag a job to another day/hour to reschedule, or tap it.</small>':''}</div><div class="card" style="padding:8px">${body}</div>`};
 function calMove(id,day,h){const j=J(id);if(!j||!isOwner())return;const t=h==null?(j.when||'T08:00').slice(11,16)||'08:00':String(h).padStart(2,'0')+':'+((j.when||'').slice(14,16)||'00');j.when=day+'T'+t;save();render()}
 function calTap(id){const j=J(id);if(!j)return;if(isTech())return techJob(id);
- modal(`<h2>${esc(jName(j))}${jNo(j)}</h2><div style="color:var(--m)">${esc(j.desc)}</div><div style="margin-top:4px">Crew: ${(j.workers||[]).map(w=>esc(W(w)?.name||'')).join(', ')||'—'}</div><label>Reschedule to</label><input id="rsw" type="datetime-local" value="${j.when||''}"><div style="margin-top:14px"><button class="btn" onclick="J('${id}').when=$('#rsw').value;save();modal();render()">Move</button><button class="btn s" onclick="modal();editJob('${id}')">Open job</button><button class="btn s" onclick="modal()">Close</button></div>`)}
+ modal(`<h2>${esc(jName(j))}</h2><div style="color:var(--m)">${esc(j.desc)}</div><div style="margin-top:4px">Crew: ${(j.workers||[]).map(w=>esc(W(w)?.name||'')).join(', ')||'—'}</div><label>Reschedule to</label><input id="rsw" type="datetime-local" value="${j.when||''}"><div style="margin-top:14px"><button class="btn" onclick="J('${id}').when=$('#rsw').value;save();modal();render()">Move</button><button class="btn s" onclick="modal();editJob('${id}')">Open job</button><button class="btn s" onclick="modal()">Close</button></div>`)}
 
 /* ---------- checklist templates (in Price Book) ---------- */
 function seedChecklists(){D.checklistTemplates.push({id:uid(),name:'Sample - Water heater install',items:['Shut off gas and water; verify off','Drain and disconnect old heater','Set new heater on pan / stand','Connect water lines with new flex lines','Connect gas with new flex connector; leak test with soap','Install / verify expansion tank and T&P discharge line','Check venting and draft','Fill tank, purge air, light / power on','Set temperature to 120°F and explain to customer','Haul away old unit; clean work area'],sample:true},
@@ -611,7 +622,7 @@ function leadQuote(id){const l=D.leads.find(x=>x.id==id);go('quotes');editQuote(
 /* ---------- scheduling calendar ---------- */
 function calCell(day,h){if(isOwner())quickSched(day,h);else{cal.v='day';cal.d=day;render()}}
 function quickSched(day,h){const un=D.jobs.filter(j=>!j.when&&!['Paid','Invoiced'].includes(j.status));const time=h!=null?String(h).padStart(2,'0')+':00':'08:00';
- modal(`<h2>Schedule · ${new Date(day+'T00:00').toLocaleDateString([],{weekday:'long',month:'short',day:'numeric'})}</h2>${un.length?`<label>Existing unscheduled job</label><select id="qsj">${opt(jSorted(un).map(j=>[j.id,jCust(j)+' · '+(j.desc||'').slice(0,40)+(isOwner()?' · '+j.num:'')]),'','+ New job')}</select>`:'<input type="hidden" id="qsj" value="">'}
+ modal(`<h2>Schedule · ${new Date(day+'T00:00').toLocaleDateString([],{weekday:'long',month:'short',day:'numeric'})}</h2>${un.length?`<label>Existing unscheduled job</label><select id="qsj">${opt(jSorted(un).map(j=>[j.id,jCust(j)+' – '+(j.desc||'').slice(0,40)+(j.num?' · '+j.num:'')]),'','+ New job')}</select>`:'<input type="hidden" id="qsj" value="">'}
  <div id="qsnew">${clientPicker('')}<label>Description</label><input id="qsd"></div><div class="row"><div><label>Time</label><input id="qst" type="time" value="${time}"></div></div><label>Assign workers</label><div>${D.workers.map(w=>`<label class="wpick" style="border-color:${wColor(w.id)}"><input type="checkbox" class="qsw" value="${w.id}">${esc(w.name)}</label>`).join('')}</div>
  <div style="margin-top:14px"><button class="btn" onclick="saveQuick('${day}')">Schedule</button><button class="btn s" onclick="cal.v='day';cal.d='${day}';modal();render()">Open day view</button><button class="btn s" onclick="modal()">Cancel</button></div>`);
  const s=$('#qsj');if(s.tagName=='SELECT')s.onchange=()=>{$('#qsnew').style.display=s.value?'none':'';const j=J(s.value);if(j)document.querySelectorAll('.qsw').forEach(c=>c.checked=(j.workers||[]).includes(c.value))}}
@@ -733,7 +744,7 @@ function profitReport(){const {rows,drafts,notInv}=profitData();const tI=rows.re
  ${drafts.length?`<p style="font-size:12px;color:var(--m)">📝 ${drafts.length} draft invoice${drafts.length>1?'s':''} (${money(drafts.reduce((s,i)=>s+invT(i).sub,0))}) not counted yet: ${drafts.map(i=>`<a href="#" onclick="viewInvoice('${i.id}');return false">${esc(i.num)}</a>`).join(', ')}</p>`:''}
  <h3 style="font-size:15px">By month</h3><div class="tw"><table><tr><th>Month</th><th class="right">Invoiced</th><th class="right">Collected</th><th class="right">Cost</th><th class="right">Profit</th><th class="right">Margin</th></tr>${Object.keys(bm).sort().reverse().map(m=>{const x=bm[m];return `<tr><td>${m}</td><td class="right">${money(x.i)}</td><td class="right">${money(x.c)}</td><td class="right">${money(x.k)}</td><td class="right">${money(x.i-x.k)}</td><td class="right">${pct(x.i,x.k)}</td></tr>`}).join('')||'<tr><td colspan=6>No sent invoices yet.</td></tr>'}</table></div>
  <h3 style="font-size:15px">By invoice</h3><div class="tw"><table><tr><th>Invoice</th><th>Client</th><th class="right">Invoiced</th><th class="right">Collected</th><th class="right">Cost</th><th class="right">Profit</th></tr>${rows.slice().sort((a,b)=>(b.i.date||'').localeCompare(a.i.date||'')).map(r=>`<tr><td><a href="#" onclick="viewInvoice('${r.i.id}');return false">${esc(r.i.num)}</a> <span class="pill ${invStatus(r.i)}">${invStatus(r.i)}</span>${r.i.job&&J(r.i.job)?`<br><small>${esc(jName(J(r.i.job)))}</small>`:'<br><small style="color:var(--m)">no job</small>'}</td><td>${cname(r.i.client)}</td><td class="right">${money(r.inv)}</td><td class="right">${money(r.col)}</td><td class="right">${money(r.c.cost)}${r.c.known?'':'<br><small style="color:#8a5a00">no cost info</small>'}</td><td class="right">${money(r.inv-r.c.cost)}<br><small>${pct(r.inv,r.c.cost)}</small></td></tr>`).join('')||'<tr><td colspan=6>No sent invoices yet.</td></tr>'}</table></div>
- ${notInv.length?`<h3 style="font-size:15px">Jobs not invoiced yet <small style="color:var(--m);font-weight:400">(not in totals)</small></h3><div class="tw"><table><tr><th>Job</th><th>Client</th><th class="right">Quoted</th><th class="right">Cost so far</th></tr>${notInv.map(({j,f})=>`<tr><td><a href="#" onclick="editJob('${j.id}');return false">${esc(jName(j))}</a>${jNo(j)}${tag(j)}</td><td>${cname(j.client)}</td><td class="right">${money(f.price)}</td><td class="right">${money(f.cost)}</td></tr>`).join('')}</table></div>`:''}</div>`}
+ ${notInv.length?`<h3 style="font-size:15px">Jobs not invoiced yet <small style="color:var(--m);font-weight:400">(not in totals)</small></h3><div class="tw"><table><tr><th>Job</th><th>Client</th><th class="right">Quoted</th><th class="right">Cost so far</th></tr>${notInv.map(({j,f})=>`<tr><td><a href="#" onclick="editJob('${j.id}');return false">${esc(jName(j))}</a>${tag(j)}</td><td>${cname(j.client)}</td><td class="right">${money(f.price)}</td><td class="right">${money(f.cost)}</td></tr>`).join('')}</table></div>`:''}</div>`}
 {const _vd=V.dash;V.dash=()=>{let h=_vd();if(isTech())return h;const k='<div class="card noprint"><h2>Profit report';const i=h.indexOf(k);if(i>=0)h=h.slice(0,i);return h+profitReport()}}
 {const _vr=V.reports;V.reports=()=>{let h=_vr();if(isTech())return h;const im={};D.invoices.filter(i=>i.status!='Draft').forEach(i=>{const m=(i.date||'').slice(0,7);im[m]=(im[m]||0)+invT(i).sub});
  const tot=Object.values(im).reduce((s,v)=>s+v,0);
@@ -781,7 +792,7 @@ function printDoc(kind,d){const s=D.settings,c=C(d.client)||{},q=kind=='quote';c
  <div class="ph-title"><div class="ph-kind">${q?'QUOTE':'INVOICE'}</div><table class="ph-meta"><tr><td>${q?'Quote':'Invoice'} #</td><td><b>${esc(d.num||'')}</b></td></tr><tr><td>Date</td><td>${fmtD(d.date)}</td></tr>${q?`<tr><td>Valid until</td><td>${fmtD(valid)}</td></tr>`:`<tr><td>Due</td><td>${d.due?fmtD(d.due):'Upon receipt'}</td></tr>`}${!q&&st=='Paid'?'<tr><td></td><td><b style="color:#1e8e4e">PAID</b></td></tr>':''}</table></div></div>
  <div class="ph-bar"></div>
  <div class="ph-boxes"><div class="ph-box"><div class="ph-lbl">${q?'Prepared for':'Bill to'}</div><b>${esc(noSample(c.name||job?.clientName||''))}</b>${c.phone?`<div>${esc(fmtPhone(c.phone))}</div>`:''}${c.email?`<div>${esc(c.email)}</div>`:''}${c.address?`<div>${esc(c.address)}</div>`:''}</div>
- <div class="ph-box"><div class="ph-lbl">Job site</div>${site?`<div>${esc(site)}</div>`:'<div class="muted">Same as customer address</div>'}${job?`<div class="muted">${esc(job.desc||'Job')} (${esc(job.num)})${job.when?' · '+fmtD(job.when.slice(0,10)):''}</div>`:''}</div></div>
+ <div class="ph-box"><div class="ph-lbl">Job site</div>${site?`<div>${esc(site)}</div>`:'<div class="muted">Same as customer address</div>'}${job?`<div class="muted">${esc(jName(job))}${job.when?' · '+fmtD(job.when.slice(0,10)):''}</div>`:''}</div></div>
  ${scope?`<div class="ph-scope"><span class="ph-lbl">Scope of work</span> ${esc(scope)}</div>`:''}
  <table class="ph-items"><thead><tr><th>Description</th><th class="r">Qty / Hrs</th><th class="r">Rate</th><th class="r">Amount</th></tr></thead>${groups.map(([l,items])=>`<tbody><tr class="ph-grp"><td colspan="4">${l}</td></tr>${items.map(i=>`<tr><td>${esc(noSample(i.desc))}</td><td class="r">${+i.qty}</td><td class="r">${money(i.price)}</td><td class="r">${money((+i.qty||0)*(+i.price||0))}</td></tr>`).join('')}</tbody>`).join('')}</table>
  <div class="ph-bottom"><div class="ph-left">${d.notes?`<div class="ph-sec"><div class="ph-lbl">Notes</div><div>${esc(d.notes).replace(/\n/g,'<br>')}</div></div>`:''}</div>
@@ -1095,6 +1106,7 @@ const VAPID_PUBLIC='BOovCGs1wlE4p2sxpkUnSK2SjOoj3dQqBrnGZx8BidfEuS7owS-HLiBd4LbE
 // Alert types. Edit labels/defaults here (keep the keys in sync with functions/lib/alerts.js).
 const NOTIF_TECH=[['assigned','You were put on a new job',true],['changed','Your job\'s date or time changed',true],['remind30','Reminders 1 hour and 30 minutes before your job (not for 8 AM starts)',true],['clockout7','Still clocked in for the day at 7 PM',true]];
 const NOTIF_OWNER=[['dayClock','A worker clocks in or out for the day',true],['jobClock','A worker starts or stops a job',true],['completed','A job is marked Completed',true],['notes','A tech adds a field note or lead',true],['orders','Someone adds to a job\'s Need to order list',true],['noteRemind','A "Remind me" you set on a note comes due',true]];
+NOTIF_OWNER.push(['todoPing','Open to-dos: a reminder banner and a phone ping when I open the app (at most every 30 min)']);Object.defineProperty(NOTIF_OWNER[NOTIF_OWNER.length-1],2,{get:()=>TODO_ON.includes(ME())});
 const nIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const nStandalone=()=>window.matchMedia&&matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const nCan=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
@@ -1153,7 +1165,7 @@ Object.assign(TIPS,{'Hours':'Everyone\'s clock hours, read-only.','Export CSV':'
 let bh={worker:'',from:'',to:''};
 function bhRange(){if(!bh.from){const ws=weekStart(new Date()),we=new Date(ws);we.setDate(we.getDate()+6);bh.from=ymd(ws);bh.to=ymd(we)}if(!bh.to||bh.to<bh.from)bh.to=bh.from;return [new Date(bh.from+'T00:00'),new Date(new Date(bh.to+'T00:00').getTime()+864e5)]}
 function bhWeek(n){const [a]=bhRange();const s=new Date(a);s.setDate(s.getDate()+7*n);const e=new Date(s);e.setDate(e.getDate()+6);bh.from=ymd(s);bh.to=ymd(e);render()}
-const bhJob=id=>{const j=J(id);return j?{num:jName(j),cust:isOwner()?(j.num||''):''}:{num:id?'(job removed)':'—',cust:''}};
+const bhJob=id=>{const j=J(id);return j?{num:jName(j),cust:j.num&&!jName(j).includes(j.num)?j.num:''}:{num:id?'(job removed)':'—',cust:''}};
 function bhData(){const [a,b]=bhRange();const ws=bh.worker?D.workers.filter(w=>w.id==bh.worker):D.workers;
  const E=D.time.filter(t=>t.in&&new Date(t.in)>=a&&new Date(t.in)<b&&(!bh.worker||t.worker==bh.worker)).sort((x,y)=>x.in.localeCompare(y.in));return {ws,E}}
 const bhT=iso=>iso?new Date(iso).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'<b class="on-clock">on clock</b>';
@@ -1167,11 +1179,64 @@ V.bhours=()=>{const {ws,E}=bhData();const sum=(L,f)=>L.reduce((s,t)=>s+f(t),0);
   ${Jl.length?`<h3>Job clock</h3><div class="tw"><table class="bht"><tr><th>Date</th><th>Job</th><th>Start–Stop</th><th class="r">Hours</th></tr>${Jl.map(t=>{const j=bhJob(t.job);return `<tr><td>${bhD(t.in)}</td><td><b>${wEsc(j.num)}</b><br><small>${wEsc(j.cust)}</small></td><td>${bhT(t.in)}–${bhT(t.out)}${tPartsNote(t)}</td><td class="r"><b>${hrs(t).toFixed(2)}</b>${hx(hrsX(t))}</td></tr>`}).join('')}</table></div>`:''}</div>`}).join('');
  const jk=Object.keys(jobs).sort((a,b)=>bhJob(a).num.localeCompare(bhJob(b).num));
  return `<div class="card noprint"><h2>Hours <small style="font-weight:400;color:var(--m)">· view only</small></h2><div class="row" style="align-items:end"><div><label>Worker</label><select onchange="bh.worker=this.value;render()">${opt(D.workers.map(w=>[w.id,w.name]),bh.worker,'All workers')}</select></div><div><label>From</label><input type="date" value="${bh.from}" onchange="bh.from=this.value;render()"></div><div><label>To</label><input type="date" value="${bh.to}" onchange="bh.to=this.value;render()"></div></div>
- <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px"><button class="btn s sm" onclick="bhWeek(-1)">◀ Week</button><button class="btn s sm" onclick="bhWeek(1)">Week ▶</button><button class="btn sm" onclick="bhCSV()">Export CSV</button><button class="btn s sm" onclick="print()">Print</button></div>
+ <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px"><button class="btn s sm" onclick="bhWeek(-1)">◀ Week</button><button class="btn s sm" onclick="bhWeek(1)">Week ▶</button><button class="btn sm" onclick="bhCSV()">Export CSV</button><button class="btn s sm" onclick="bhPrint()">🖨 Print</button></div>
  <p style="font-size:12.5px;color:var(--m);margin:8px 0 0">Hours are rounded to the nearest 15 min (1:15 = 1.25). Gray = exact clock time.</p></div>
  <div class="printonly"><h2>Hours ${bh.from} to ${bh.to}</h2></div>
  ${cards||'<div class="card">No clock time in these dates.</div>'}
  ${jk.length?`<div class="card"><h2>Totals by job</h2><div class="tw"><table class="bht"><tr><th>Job</th><th>Who</th><th class="r">Hours</th></tr>${jk.map(k=>{const j=bhJob(k),x=jobs[k];return `<tr><td><b>${wEsc(j.num)}</b><br><small>${wEsc(j.cust)}</small></td><td><small>${Object.entries(x.by).map(([w,h])=>wEsc(W(w)?.name||'?')+' '+h.toFixed(2)).join('<br>')}</small></td><td class="r"><b>${x.h.toFixed(2)}</b>${hx(x.x)}</td></tr>`}).join('')}</table></div></div>`:''}`};
+/* ===================== Billing hours: reliable print =====================
+   iPhone/iPad home-screen app ignores window.print(), so Print opens a sheet with
+   "Print" (window.print, works in browsers/desktop) and "Save / Share PDF" (PDF built here, no library;
+   iOS Share sheet -> Print or Save to Files). Hours only, never pay or money. */
+const bpIOS=()=>/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform=='MacIntel'&&navigator.maxTouchPoints>1);
+const bpStandalone=()=>navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+const bpTxt=h=>String(h??'').replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+function bpLabel(id){const j=bhJob(id);return [j.num,j.cust].filter(Boolean).join(' · ')}
+function bpRows(){const {ws,E}=bhData();const out=[];const jobs={};
+ ws.forEach(w=>{const A=E.filter(t=>t.worker==w.id);if(!A.length&&!bh.worker)return;const Dl=A.filter(isDayT),Jl=mergeT(A.filter(isJobT));
+  out.push({k:'h',t:w.name||'Worker'});out.push({k:'s',t:`Day (paid): ${Dl.reduce((s,t)=>s+hrs(t),0).toFixed(2)} h    On jobs: ${Jl.reduce((s,t)=>s+hrs(t),0).toFixed(2)} h`});
+  if(Dl.length){out.push({k:'th',c:['Date','In','Out','','Hours']});Dl.forEach(t=>out.push({k:'r',c:[bhD(t.in),bpTxt(bhT(t.in)),bpTxt(bhT(t.out)),'',hrs(t).toFixed(2)]}))}else out.push({k:'s',t:'No day clock time.'});
+  if(Jl.length){out.push({k:'th',c:['Date','Job','Start-Stop','','Hours']});Jl.forEach(t=>{out.push({k:'r',c:[bhD(t.in),bpLabel(t.job),bpTxt(bhT(t.in))+'-'+bpTxt(bhT(t.out)),'',hrs(t).toFixed(2)]});const k=t.job||'';(jobs[k]=jobs[k]||{h:0,by:{}});jobs[k].h+=hrs(t);jobs[k].by[w.name]=(jobs[k].by[w.name]||0)+hrs(t)})}
+  out.push({k:'gap'})});
+ const jk=Object.keys(jobs);if(jk.length){out.push({k:'h',t:'Totals by job'});out.push({k:'th',c:['Job','','Who','','Hours']});jk.sort((a,b)=>bpLabel(a).localeCompare(bpLabel(b))).forEach(k=>out.push({k:'r',c:[bpLabel(k),'',Object.entries(jobs[k].by).map(([n,h])=>n+' '+h.toFixed(2)).join(', '),'',jobs[k].h.toFixed(2)]}))}
+ if(!out.length)out.push({k:'s',t:'No clock time in these dates.'});return out}
+/* minimal PDF writer (Helvetica, Letter, WinAnsi) */
+function bpPDF(){const W=612,H=792,M=40,LH=15;const co=(D.settings&&D.settings.company)||'Central Plumbing';
+ const enc=s=>{s=String(s).replace(/[–—]/g,'-').replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/…/g,'...').replace(/×/g,'x');let o='';for(const ch of s){const c=ch.charCodeAt(0);o+=c==0xb7||(c>=32&&c<127)||(c>=0xa0&&c<=0xff)?ch:'?'}return o.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)')};
+ const fit=(s,n)=>{s=String(s);return s.length>n?s.slice(0,n-1)+'…':s};
+ const X=[M,M+78,M+330,M+420,W-M];const pages=[];let cur='',y=0;
+ const T=(x,yy,s,b,sz=10,right)=>{if(right)x-=enc(s).length*sz*0.5;cur+=`BT /${b?'F2':'F1'} ${sz} Tf ${x.toFixed(1)} ${yy.toFixed(1)} Td (${enc(s)}) Tj ET\n`};
+ const newPage=()=>{if(cur)pages.push(cur);cur='';y=H-M;T(M,y,co+' - Hours '+bh.from+' to '+bh.to,true,13);y-=12;T(M,y,'Hours rounded to the nearest 15 min.  Page '+(pages.length+1),false,8);cur+=`0.6 w ${M} ${y-5} m ${W-M} ${y-5} l S\n`;y-=24};
+ const need=n=>{if(y-n<M)newPage()};newPage();
+ bpRows().forEach(r=>{if(r.k=='h'){need(40);y-=4;T(M,y,fit(r.t,70),true,12);y-=LH+2}
+  else if(r.k=='s'){need(LH);T(M,y,fit(r.t,100),false,9.5);y-=LH}
+  else if(r.k=='th'){need(LH*2);r.c.forEach((c,i)=>c&&T(i==4?X[4]:X[i],y,c,true,9,i==4));cur+=`0.4 w ${M} ${y-4} m ${W-M} ${y-4} l S\n`;y-=LH}
+  else if(r.k=='r'){need(LH);const w=[14,48,16,0,8];r.c.forEach((c,i)=>c&&T(i==4?X[4]:X[i],y,fit(c,w[i]),i==4,9.5,i==4));y-=LH}
+  else if(r.k=='gap'){y-=8}});
+ pages.push(cur);
+ const objs=[];const add=s=>{objs.push(s);return objs.length};
+ add('<< /Type /Catalog /Pages 2 0 R >>');add('');add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+ const kids=pages.map(c=>{const s=add(`<< /Length ${c.length} >>\nstream\n${c}endstream`);return add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${s} 0 R >>`)});
+ objs[1]=`<< /Type /Pages /Kids [${kids.map(k=>k+' 0 R').join(' ')}] /Count ${kids.length} >>`;
+ let out='%PDF-1.4\n';const off=[];objs.forEach((o,i)=>{off.push(out.length);out+=`${i+1} 0 obj\n${o}\nendobj\n`});
+ const xr=out.length;out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+off.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+`trailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF`;
+ const u=new Uint8Array(out.length);for(let i=0;i<out.length;i++)u[i]=out.charCodeAt(i)&255;return new Blob([u],{type:'application/pdf'})}
+const bpName=()=>`Hours ${bh.from} to ${bh.to}.pdf`;
+async function bpShare(){const m=$('#bpmsg');try{const blob=bpPDF(),f=new File([blob],bpName(),{type:'application/pdf'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'Hours '+bh.from+' to '+bh.to});if(m)m.textContent='✔ Shared. Pick Print or Save to Files.';return}catch(e){if(e&&e.name=='AbortError')return}}
+  bpDownload(blob)}catch(e){console.warn(e);if(m)m.textContent='Could not make the PDF: '+e.message}}
+function bpDownload(blob){blob=blob||bpPDF();const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=bpName();document.body.appendChild(a);a.click();a.remove();
+ if(bpIOS())setTimeout(()=>{location.href=u},300); // iOS: open the PDF viewer (Share -> Print)
+ setTimeout(()=>URL.revokeObjectURL(u),60000);const m=$('#bpmsg');if(m)m.textContent='✔ PDF saved. Open it and use Share → Print if needed.'}
+function bpPrint(){modal();setTimeout(()=>{try{window.print()}catch(e){bpShare()}},120)}
+function bhPrint(){const ios=bpIOS(),sa=bpStandalone();
+ modal(`<div id="bpv"><h2 style="margin:0 0 4px">🖨 Print hours</h2><p style="margin:0 0 10px;color:var(--m)">${esc(bh.from)} to ${esc(bh.to)}${bh.worker?' · '+esc((W(bh.worker)||{}).name||''):' · all workers'}</p>
+ ${ios&&sa?`<div class="fcwarn" style="font-weight:400">On iPhone/iPad the home-screen app can't open the print window. Tap <b>Save / Share PDF</b>, then choose <b>Print</b> (or Save to Files).</div>`:''}
+ <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+ ${ios&&sa?'':`<button class="btn" id="bp_print" onclick="bpPrint()">🖨 Print</button>`}
+ <button class="btn ${ios&&sa?'':'s'}" id="bp_pdf" onclick="bpShare()">📄 ${ios?'Save / Share PDF':'Download PDF'}</button>
+ ${ios&&sa?`<button class="btn s" id="bp_print" onclick="bpPrint()">Try the print window anyway</button>`:''}
+ <button class="btn s" onclick="modal()">Close</button></div><small id="bpmsg" style="display:block;margin-top:8px;color:var(--m)"></small></div>`)}
 function bhCSV(){const {E}=bhData();const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const rows=[['Worker','Type','Date','Start','Stop','Hours (rounded 0.25)','Exact h:mm','Customer / job','Job #','Clock-ins']];
  mergeT(E).forEach(t=>{const j=isJobT(t)?bhJob(t.job):{num:'',cust:''};rows.push([W(t.worker)?.name||'',isJobT(t)?'Job':'Day',ymd(t.in),new Date(t.in).toLocaleTimeString(),t.out?new Date(t.out).toLocaleTimeString():'ON CLOCK',hrs(t).toFixed(2),hmx(hrsX(t)),j.num,j.cust,t.parts?t.parts.length:1])});
  dl(`hours-${bh.from}-to-${bh.to}.csv`,rows.map(r=>r.map(q).join(',')).join('\n'),'text/csv')}
@@ -1342,10 +1407,10 @@ function ordSet(id,st){if(!isOwner())return;const o=D.orders.find(x=>x.id==id);i
  if(st=='open'){delete o.orderedBy;delete o.orderedByName;delete o.orderedAt;delete o.receivedBy;delete o.receivedAt}save();ordRedraw()}
 {const _je=jobExtras;jobExtras=function(j){const h=_je(j);if(isBilling()||!j||!j.id)return h;setTimeout(()=>drawOrd(j.id),0);return h+ordBox(j)}}
 /* owners: combined list, grouped by job */
-V.orders=()=>{if(!isOwner())return '';const L=(D.orders||[]).filter(o=>J(o.jobId));const by={};L.forEach(o=>(by[o.jobId]=by[o.jobId]||[]).push(o));
+V.orders=()=>{if(!isOwner())return '';const L=(D.orders||[]).filter(o=>J(o.jobId)&&(!(jf.q&&jf.q.trim())||jobMatch(J(o.jobId),jf.q)));const by={};L.forEach(o=>(by[o.jobId]=by[o.jobId]||[]).push(o));
  const groups=Object.entries(by).map(([jid,a])=>({j:J(jid),a:a.sort(ordSort),open:a.filter(o=>o.status=='open').length,ord:a.filter(o=>o.status=='ordered').length,last:a.reduce((m,o)=>o.at>m?o.at:m,'')})).sort((x,y)=>(y.open>0)-(x.open>0)||(y.ord>0)-(x.ord>0)||byJobNum(x.j,y.j));
  const act=groups.filter(g=>g.open||g.ord),done=groups.filter(g=>!g.open&&!g.ord);
- const G=g=>`<div class="card ordg"><div class="ordjh" onclick="editJob('${g.j.id}')"><b>${esc(jName(g.j))}</b>${jNo(g.j)}${g.open?` <span class="ordbdg">${g.open} to order</span>`:''}${g.ord?` <span class="ordbdg o">${g.ord} ordered</span>`:''}<div style="font-size:13px;color:var(--m)">${esc(g.j.clientAddress||C(g.j.client)?.address||'')}</div></div>${g.a.map(o=>ordRow(o,1)).join('')}</div>`;
+ const G=g=>`<div class="card ordg"><div class="ordjh" onclick="editJob('${g.j.id}')"><b>${esc(jName(g.j))}</b>${g.open?` <span class="ordbdg">${g.open} to order</span>`:''}${g.ord?` <span class="ordbdg o">${g.ord} ordered</span>`:''}<div style="font-size:13px;color:var(--m)">${esc(g.j.clientAddress||C(g.j.client)?.address||'')}</div></div>${g.a.map(o=>ordRow(o,1)).join('')}</div>`;
  return `<div class="card"><h2 style="margin:0">🛒 Need to order</h2><div style="color:var(--m);font-size:14px">Items the crew added on their jobs. Open items first. Tap a job to open it.</div></div>${act.map(G).join('')||'<div class="card" style="color:var(--m)">Nothing to order right now.</div>'}${done.length?`<details class="card"><summary>Received (${done.reduce((n,g)=>n+g.a.length,0)} items)</summary>${done.map(G).join('')}</details>`:''}`};
 {const _js=GROUPS.jobs.subs;GROUPS.jobs.subs=()=>isOwner()?[['jobs','Jobs'],['orders','To order'+(ordOpenN()?' ('+ordOpenN()+')':'')]]:_js()}
 {const _vd=V.dash;V.dash=()=>{const h=_vd();if(!isOwner())return h;const n=ordOpenN();return (n?`<div class="card ordhome" onclick="go('orders')"><b>🛒 ${n} item${n>1?'s':''} to order</b> <span style="color:var(--m)">from the crew · tap to see the list ›</span></div>`:'')+h}}
@@ -1363,11 +1428,12 @@ V.orders=()=>{if(!isOwner())return '';const L=(D.orders||[]).filter(o=>J(o.jobId
 const jClip=(s,n)=>{s=String(s||'').trim();return s.length>n?s.slice(0,n-1)+'…':s};
 const jCust=j=>noSample((j&&((typeof C=='function'&&C(j.client)?.name)||j.clientName))||'Customer');
 let _jlc=null;function jDupInfo(){if(_jlc&&_jlc.a===D.jobs&&_jlc.n===D.jobs.length)return _jlc;const m={},d={};D.jobs.forEach(x=>{const k=jCust(x).toLowerCase();m[k]=(m[k]||0)+1;const k2=k+'|'+String(x.desc||'').trim().toLowerCase();d[k2]=(d[k2]||0)+1});return _jlc={a:D.jobs,n:D.jobs.length,m,d}}
-function jName(j){if(!j)return 'Job';const c=jCust(j),I=jDupInfo(),k=c.toLowerCase();if((I.m[k]||0)<2)return c;const ds=String(j.desc||'').trim();
+function jNm(j){if(!j)return 'Job';const c=jCust(j),I=jDupInfo(),k=c.toLowerCase();if((I.m[k]||0)<2)return c;const ds=String(j.desc||'').trim();
  if(ds&&(I.d[k+'|'+ds.toLowerCase()]||0)<2)return c+' – '+jClip(ds,30);const dt=j.when&&/^\d{4}-\d\d-\d\d/.test(j.when)?new Date(j.when.slice(0,10)+'T12:00').toLocaleDateString([],{month:'short',day:'numeric'}):'';
- const sf=((ds?jClip(ds,22)+' ':'')+(dt||(isOwner()?j.num:'')||'')).trim();return sf?c+' – '+sf:c}
-const jNo=j=>j&&j.num&&isOwner()?` <small class="jno">${esc(j.num)}</small>`:'';
-const jOptT=j=>jName(j)+(isOwner()&&j.num?' · '+j.num:'');
+ const sf=((ds?jClip(ds,22)+' ':'')+(dt||'')).trim();return sf?c+' – '+sf:c}
+const jName=j=>{const b=jNm(j);return j&&j.num?b+' · '+j.num:b};
+const jNo=j=>j&&j.num?`<span class="jno"> · ${esc(j.num)}</span>`:'';
+const jOptT=j=>jName(j);
 const jSorted=L=>L.slice().sort((a,b)=>jName(a).localeCompare(jName(b))||byJobNum(a,b));
 {const _r=render;render=function(){_jlc=null;return _r()}}
 /* ===== One time line per worker + job + day. Raw clock entries are kept as-is (audit trail); this only combines for display and billing.
@@ -1380,7 +1446,126 @@ const tPartsNote=t=>t&&t.parts?`<br><small style="color:var(--m)">${t.parts.leng
 function editParts(ids){const P=String(ids).split(',').map(id=>D.time.find(t=>t.id==id)).filter(Boolean);if(!P.length)return;if(P.length==1)return editTime(P[0].id);const g=mergeT(P)[0];
  modal(`<h2>${esc(W(P[0].worker)?.name||'')} · ${esc(jName(J(P[0].job)))}</h2><p style="color:var(--m);margin:4px 0 10px">These clock-ins on the same job and day show as one line (${hrs(g).toFixed(2)} h). Pick one to fix it.</p>${P.map(t=>`<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #eee;padding:8px 0"><span>${fmtDT(t.in)} – ${t.out?fmtDT(t.out):'<b class="on-clock">on clock</b>'} · ${hmx(hrsX(t))}</span><button class="btn sm s" onclick="editTime('${t.id}')">Edit</button></div>`).join('')}<div style="margin-top:12px"><button class="btn s" onclick="modal()">Close</button></div>`)}
 </script>
-<style>.jno{color:#8a8f98;font-weight:400;font-size:11.5px;margin-left:4px}.tmerged td{background:#f7fbff}</style>
+<style>.jno{color:#3d4550;font-weight:600;white-space:nowrap}.tmerged td{background:#f7fbff}</style>
+<script>
+/* ===== Jobs search: customer name or job number in any form (J-0012, j0012, 0012, 12), partial, any case ===== */
+function jobMatch(j,q){q=String(q||'').trim().toLowerCase();if(!q)return true;if(!j)return false;
+ const num=String(j.num||'').toLowerCase(),nd=num.replace(/\D/g,'');
+ const qq=q.replace(/\s+/g,''),m=qq.match(/^(job|j)?[-#]?(\d+)$/);
+ if(m&&nd){if(+nd===+m[2])return true;if(m[1]||/^#|^0/.test(qq.replace(/^(job|j)-?/,'')))return false; /* J-0012, j0012, 0012, #12: exact number */
+  if(nd.replace(/^0+/,'').startsWith(m[2].replace(/^0+/,'')))return true}
+ const hay=[num,num.replace(/-/g,''),jCust(j),j.clientName,j.desc,j.clientAddress,typeof C=='function'&&C(j.client)?.address].filter(Boolean).join(' | ').toLowerCase();
+ return q.split(/\s+/).every(w=>hay.includes(w))}
+let _jsT=null;
+function jSearchIn(el){jf.q=window._jsLast=el.value;clearTimeout(_jsT);_jsT=setTimeout(()=>{const pos=el.selectionStart;render();const fx=()=>{const n=document.getElementById('jsq');if(n&&document.activeElement!==n){n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}};fx();setTimeout(fx,0);requestAnimationFrame(()=>requestAnimationFrame(fx))},250)}
+(function(){const r0=render;render=function(){const a=document.activeElement;const live=a&&a.id==='jsq'&&jf.q===window._jsLast?a:null;if(live)jf.q=window._jsLast=live.value;const out=r0.apply(this,arguments);if(live){const n=document.getElementById('jsq');if(n&&n!==live){n.replaceWith(live);live.focus()}}return out}})();
+function jSearchClear(){jf.q='';render();const n=document.getElementById('jsq');n&&n.focus()}
+function jSearchBox(cnt){const q=jf.q||'';return `<div class="card jsearch noprint"><label for="jsq" style="font-weight:600">🔍 Find a job</label><div class="jsrow"><input id="jsq" type="search" autocomplete="off" placeholder="Customer name or job # (e.g. Smith or 12)" value="${esc(q)}" oninput="jSearchIn(this)" onkeydown="if(event.key=='Escape')jSearchClear()">${q?`<button type="button" class="jsx" aria-label="Clear search" onclick="jSearchClear()">✕</button>`:''}</div>${q.trim()&&cnt!=null?`<small style="color:var(--m)">${cnt} match${cnt==1?'':'es'} for “${esc(q.trim())}”</small>`:''}</div>`}
+{const _vo=V.orders;V.orders=()=>{const h=_vo();if(!h)return h;const L=(D.orders||[]).filter(o=>J(o.jobId)&&jobMatch(J(o.jobId),jf.q));return jSearchBox(new Set(L.map(o=>o.jobId)).size)+h}}
+</script>
+<style>.jsearch input{font-size:17px;padding:12px 40px 12px 12px;width:100%;box-sizing:border-box}.jsrow{position:relative;margin-top:6px}.jsx{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:#e6e8eb;border-radius:50%;width:30px;height:30px;font-size:15px;cursor:pointer}</style>
+<script>
+/* ===== Open to-do reminder (owners). On launch / coming back after 30+ min: banner on Home + push via openPings/{email} -> function. =====
+   Default ON for Mark (Dad), OFF for others; per-account setting under Alerts (pushPrefs.owner.todoPing). */
+const TODO_ON=['thecentralplumber@gmail.com'];const TODO_GAP=30*60e3;
+function todoWants(){if(!isOwner())return false;if(window.cpPush&&!nPrefs){nPrefs={};cpPush.getPrefs().then(p=>{nPrefs=p||{};render()}).catch(()=>{})}const o=nPrefs&&nPrefs.owner;return o&&'todoPing' in o?!!o.todoPing:TODO_ON.includes(ME())}
+function todoOpen(){const seen=new Set(),out=[];const all=[...((typeof ON!='undefined'&&ON&&ON.mine)||[]),...((typeof ON!='undefined'&&ON&&ON.shared)||[])];
+ all.forEach(n=>{if(!n||seen.has(n.id))return;seen.add(n.id);if(n.done)return;const it=(n.items||[]).filter(i=>i&&!i.done&&String(i.t||'').trim());
+  if(it.length)it.forEach(i=>out.push({note:n.id,t:String(i.t).trim()}));else if(n.type=='todo'&&String(n.text||'').trim())out.push({note:n.id,t:String(n.text).trim()})});return out}
+let todoHide=false,_todoLast=0;
+function todoCheck(){if(!isOwner()||!window.cpNotes||typeof ON=='undefined'||!ON)return;if(!todoWants())return;const k='cpTodoPing:'+ME(),now=Date.now();
+ let last=+(localStorage.getItem(k)||0);if(now-last<TODO_GAP||now-_todoLast<TODO_GAP)return;const L=todoOpen();if(!L.length)return;
+ _todoLast=now;try{localStorage.setItem(k,String(now))}catch(e){}todoHide=false;render();window.cpPush&&cpPush.openPing&&cpPush.openPing().catch(e=>console.warn('openPing',e))}
+function todoBanner(){if(todoHide||!todoWants())return '';const L=todoOpen();if(!L.length)return '';const c=L.length;
+ return `<div class="card todoban noprint" onclick="go('onotes')" role="button" style="cursor:pointer"><button class="todox" aria-label="Hide" onclick="event.stopPropagation();todoHide=true;render()">✕</button><b>📝 You have ${c} open to-do${c==1?'':'s'}</b><ul>${L.slice(0,3).map(x=>`<li>${esc(x.t.length>70?x.t.slice(0,69)+'…':x.t)}</li>`).join('')}</ul>${c>3?`<small>+${c-3} more · </small>`:''}<small><u>Tap to open Notes</u></small></div>`}
+{const _vd=V.dash;V.dash=()=>{const h=_vd();return isOwner()?todoBanner()+h:h}}
+{const _nd=window.onNotesData;window.onNotesData=(m,sh)=>{const r=_nd(m,sh);setTimeout(todoCheck,0);return r}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)todoCheck()});
+</script>
+<style>.todoban{border-left:4px solid #1565C0;background:#f3f8ff;position:relative}.todoban ul{margin:6px 0 4px 18px;padding:0}.todoban li{margin:2px 0}.todox{position:absolute;right:8px;top:8px;border:0;background:transparent;font-size:16px;cursor:pointer;color:#555}</style>
+<script>
+/* ===== Finish job (techs + owners). Reuses the existing "Completed" status = finished, ready to invoice.
+   Records finishedBy/finishedByName/finishedAt; stops the tapper's own open job timer on this job. Push: functions "completed" alert. ===== */
+const jReady=j=>j&&j.status=='Completed'&&!(j.invoice&&typeof IV=='function'&&IV(j.invoice));
+const jCanFinish=j=>j&&['Scheduled','In Progress'].includes(j.status)&&(isOwner()||(isTech()&&(j.techEmails||[]).map(e=>String(e).toLowerCase()).includes(ME())));
+function reopenJob(id){const j=J(id);if(!j||!isOwner()||j.status!='Completed')return;if(!confirm('Reopen '+jName(j)+'? It goes back to In Progress.'))return;
+ j.status='In Progress';j.reopenedBy=ME();j.reopenedAt=new Date().toISOString();save();modal();render();cpNote(jName(j)+' reopened.')}
+function finBar(j){if(!j||isBilling())return '';
+ if(jCanFinish(j))return `<div class="finbar"><button class="btn finbtn" onclick="finishJob('${j.id}')">✅ Finish job</button><small>Tap when the work is done.</small></div>`;
+ if(j.status=='Completed'){const by=j.finishedByName?` by ${esc(j.finishedByName)}`:'',at=j.finishedAt?` · ${esc(fmtDT(j.finishedAt))}`:'';
+  return `<div class="finbar done"><b>✅ Finished${by}</b><small>${at}</small>${isOwner()?`${jReady(j)?' <span class="pill rdy">Ready to invoice</span>':''}<div style="margin-top:6px">${jReady(j)&&typeof invFromJob=='function'?`<button class="btn sm" onclick="modal();invFromJob('${j.id}')">Create invoice</button> `:''}<button class="btn sm s" onclick="reopenJob('${j.id}')">Reopen job</button></div>`:''}</div>`}
+ return ''}
+{const _ej=editJob;editJob=function(id,fq){const r=_ej(id,fq);if(id)finInsert(id);return r}}
+{const _tj=techJob;techJob=function(id){const r=_tj(id);finInsert(id);return r}}
+function readyCard(){if(!isOwner())return '';const L=D.jobs.filter(jReady).sort((a,b)=>(b.finishedAt||b.when||'').localeCompare(a.finishedAt||a.when||''));if(!L.length)return '';
+ return `<div class="card rdycard"><h2 style="margin:0 0 6px">🧾 Ready to invoice <span class="pill">${L.length}</span></h2>${L.slice(0,6).map(j=>`<div class="rdyrow"><div style="min-width:0;flex:1"><a href="#" onclick="editJob('${j.id}');return false"><b>${esc(jName(j))}</b></a><br><small style="color:var(--m)">Finished${j.finishedByName?' by '+esc(j.finishedByName):''}${j.finishedAt?' · '+esc(fmtDT(j.finishedAt)):''}</small></div><button class="btn sm" onclick="invFromJob('${j.id}')">Create invoice</button></div>`).join('')}${L.length>6?`<a href="#" onclick="jf.range='ready';go('jobs');return false">See all ${L.length}</a>`:''}</div>`}
+{const _vd=V.dash;V.dash=()=>{const h=_vd();if(!isOwner())return h;const b=typeof todoBanner=='function'?todoBanner():'';return h.startsWith(b)&&b?b+readyCard()+h.slice(b.length):readyCard()+h}}
+/* "Ready to invoice" badge on job labels in the Jobs tab (owners) */
+function rdyB(x){return isOwner()&&jReady(x)?' <span class="pill rdy">Ready to invoice</span>':''}
+
+/* ===================== Finish checklist (Finish job -> sheet) =====================
+   1 Parts to restock (truck stock used) -> job.restock[] {id,text,qty,by,byName,at,done,doneBy,doneAt}
+   2 Parts to order -> existing orderItems (Need to order), flagged fromFinish so the push is folded into Ready-to-invoice
+   3 Photos (existing photo store, tag "after"); none -> need a photo or "Skip photos" + reason
+   No prices anywhere. Part picker uses names only (owners: catalog; techs: partNames/list mirror). */
+let FC=null;
+const fcNames=()=>{const a=isOwner()?(D.parts||[]).map(p=>p.name):(window.cpPartNames||[]);return [...new Set(a.map(x=>String(x||'').trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y))};
+function finishJob(id){const j=J(id);if(!jCanFinish(j))return;FC={id,rs:[],ro:[],noR:false,noO:false,skip:false,reason:'',photos:null,busy:false};fcOpen()}
+function fcSec(k,n,title,hint,none){return `<div class="fcsec" id="fc_${k}"><h3>${n}. ${title}</h3><small class="fchint">${hint}</small><div id="fc_${k}L" class="fcl"></div>
+ <div class="fcadd"><input id="fc_${k}t" list="fcparts" placeholder="Part name (pick or type)" autocomplete="off" onkeydown="if(event.key=='Enter'){event.preventDefault();fcAdd('${k}')}"><input id="fc_${k}q" type="number" min="1" step="1" value="1" inputmode="numeric" aria-label="Qty"><button type="button" class="btn sm" onclick="fcAdd('${k}')">Add</button></div>
+ <label class="fcnone"><input type="checkbox" id="fc_${k}n" onchange="fcNone('${k}',this.checked)"> ${none}</label></div>`}
+function fcOpen(){const j=J(FC.id);
+ modal(`<div class="fcsheet"><h2 style="margin:0">Finish job</h2><div class="fcjob">${esc(jName(j))}</div>
+ ${fcSec('rs',1,'Parts to restock','Truck stock you used that needs replacing.','Nothing to restock')}
+ ${fcSec('ro',2,'Parts to order','Goes on this job\'s Need to order list.','Nothing to order')}
+ <div class="fcsec" id="fc_ph"><h3>3. Photos</h3><div id="fc_phI"><small class="fchint">Checking photos…</small></div>
+  <label class="btn bigcam" id="fc_cam">📷 <span id="fc_camT">Take photos of the finished job</span><input type="file" accept="image/*" capture="environment" style="display:none" onchange="fcPhoto(this.files);this.value=''"></label>
+  <label class="btn s fcgal">🖼 Add from gallery<input type="file" accept="image/*" multiple style="display:none" onchange="fcPhoto(this.files);this.value=''"></label><small id="fc_phM" class="fchint"></small>
+  <div id="fc_skW"><label class="fcnone"><input type="checkbox" id="fc_sk" onchange="FC.skip=this.checked;fcGate()"> Skip photos</label><input id="fc_sr" placeholder="Why no photos? (e.g. customer declined)" maxlength="120" oninput="FC.reason=this.value;fcGate()"></div></div>
+ <datalist id="fcparts">${fcNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
+ <div class="fcfoot"><small id="fc_need" class="fchint"></small><button type="button" class="btn s fccan" onclick="fcCancel()">Cancel</button><button type="button" class="btn finbtn" id="fc_go" disabled onclick="fcSubmit()">✅ Submit &amp; finish job</button></div></div>`);
+ fcLists();fcPhLoad();fcGate()}
+function fcCancel(){const id=FC&&FC.id;FC=null;modal();if(id)(isOwner()?editJob:techJob)(id)}
+function fcAdd(k){const t=$('#fc_'+k+'t'),q=$('#fc_'+k+'q');const v=(t.value||'').trim().slice(0,200);if(!v){t.focus();return}
+ FC[k].push({text:v,qty:Math.max(1,Math.round(+q.value||1))});t.value='';q.value=1;FC[k=='rs'?'noR':'noO']=false;$('#fc_'+k+'n').checked=false;fcLists();fcGate();t.focus()}
+function fcDel(k,i){FC[k].splice(i,1);fcLists();fcGate()}
+function fcNone(k,on){FC[k=='rs'?'noR':'noO']=on;if(on)FC[k]=[];fcLists();fcGate()}
+function fcLists(){['rs','ro'].forEach(k=>{const el=$('#fc_'+k+'L');if(el)el.innerHTML=FC[k].map((x,i)=>`<div class="fcit"><span><b>${x.qty}×</b> ${esc(x.text)}</span><button type="button" class="fcx" aria-label="Remove" onclick="fcDel('${k}',${i})">✕</button></div>`).join('')})}
+async function fcPhLoad(){if(!FC)return;const id=FC.id;let L=[];try{L=await photoStore.list(id)}catch(e){}if(!FC||FC.id!=id)return;FC.photos=L.length;const el=$('#fc_phI');if(!el)return;
+ el.innerHTML=L.length?`<small class="fchint">This job has ${L.length} photo${L.length>1?'s':''}. Add more if you want (optional).</small><div class="fcth">${L.slice(-8).map(p=>`<div class="fct" data-p="${esc(p.id)}"></div>`).join('')}</div>`:`<div class="fcwarn">📷 No photos on this job yet. Take photos of the finished job.</div>`;
+ const ct=$('#fc_camT');if(ct)ct.textContent=L.length?'Add more photos':'Take photos of the finished job';const sk=$('#fc_skW');if(sk)sk.style.display=L.length?'none':'';
+ for(const p of L.slice(-8)){try{const d=await photoStore.get(p);const b=document.querySelector(`.fct[data-p="${p.id}"]`);if(b&&d)b.style.backgroundImage=`url("${d}")`}catch(e){}}fcGate()}
+async function fcPhoto(files){if(!FC||!files||!files.length)return;const m=$('#fc_phM'),j=J(FC.id);FC.busy=true;fcGate();let n=0;
+ for(const f of files){try{m.textContent=`Saving photo ${++n}/${files.length}…`;await photoStore.add(j,'after',await compress(f))}catch(e){alert('Photo failed: '+e.message)}}
+ m.textContent=n?`✔ Saved ${n} photo${n>1?'s':''}`:'';FC.busy=false;await fcPhLoad()}
+function fcMissing(){if(!FC)return ['…'];const m=[];if(!FC.rs.length&&!FC.noR)m.push('restock (add parts or tick Nothing)');if(!FC.ro.length&&!FC.noO)m.push('order (add parts or tick Nothing)');
+ if(FC.photos===null||FC.busy)m.push('photos (saving/checking…)');else if(!FC.photos&&!(FC.skip&&FC.reason.trim().length>=3))m.push('a photo, or Skip photos with a reason');return m}
+function fcGate(){const b=$('#fc_go'),n=$('#fc_need');if(!b)return;const m=fcMissing();b.disabled=!!m.length;if(n)n.textContent=m.length?'Still need: '+m.join(' · '):'All set.'}
+function fcSubmit(){if(!FC||fcMissing().length)return;const j=J(FC.id);if(!jCanFinish(j))return;
+ const w=myWorkerId(),open=D.time.find(t=>isJobT(t)&&t.job==j.id&&!t.out&&w&&t.worker==w),now=new Date().toISOString(),me=ME(),nm=(W(w)&&W(w).name)||(typeof oName=='function'?oName(me):'')||me;
+ if(open){open.out=now;if(typeof tBy=='function')tBy(open)}
+ const rs=FC.rs.map(x=>({id:uid()+uid(),text:x.text,qty:x.qty,by:me,byName:nm,at:now,done:false}));
+ if(rs.length)j.restock=(j.restock||[]).concat(rs).slice(-60);
+ const te=(j.techEmails||[]).slice();FC.ro.forEach(x=>D.orders.push({id:uid()+uid(),jobId:j.id,text:x.text,qty:x.qty,note:'',by:me,byName:typeof ordWho=='function'?ordWho():nm,at:now,status:'open',techEmails:te,fromFinish:true}));
+ j.finishSummary={restock:rs.length,order:FC.ro.length,photos:FC.photos||0,photoSkip:FC.photos?'':FC.reason.trim().slice(0,120)};
+ j.status='Completed';j.finishedBy=me;j.finishedByName=nm;j.finishedAt=now;
+ const c=[rs.length&&rs.length+' to restock',FC.ro.length&&FC.ro.length+' to order'].filter(Boolean).join(', ');FC=null;
+ save();modal();render();cpNote('✅ '+jName(j)+' finished'+(open?' · timer stopped':'')+(c?' · '+c:'')+'.')}
+/* Finish bar goes at the very bottom of the job sheet */
+function finInsert(id){const j=J(id),m=document.querySelector('#modal .modal > div');if(!j||!m||document.querySelector('#modal .finbar'))return;m.insertAdjacentHTML('beforeend',finBar(j))}
+/* ===== Owners: Restock list (Jobs › Restock), check off as the truck is restocked ===== */
+const rsOpenN=()=>(D.jobs||[]).reduce((n,j)=>n+(j.restock||[]).filter(r=>!r.done).length,0);
+function rsTick(jid,rid,on){if(!isOwner())return;const j=J(jid),r=j&&(j.restock||[]).find(x=>x.id==rid);if(!r)return;r.done=!!on;if(on){r.doneBy=ME();r.doneAt=new Date().toISOString()}else{delete r.doneBy;delete r.doneAt}save();render()}
+V.restock=()=>{if(!isOwner())return '';const L=(D.jobs||[]).filter(j=>(j.restock||[]).length&&(!(jf.q&&jf.q.trim())||jobMatch(j,jf.q)));
+ const op=L.filter(j=>j.restock.some(r=>!r.done)).sort((a,b)=>(b.finishedAt||'').localeCompare(a.finishedAt||'')),dn=L.filter(j=>!j.restock.some(r=>!r.done));
+ const row=(j,r)=>`<div class="rsit${r.done?' done':''}"><input type="checkbox" ${r.done?'checked':''} onchange="rsTick('${j.id}','${r.id}',this.checked)"><span><b>${r.qty||1}×</b> ${esc(r.text)}<br><small>${esc(r.byName||'')}${r.at?' · '+esc(fmtDT(r.at)):''}${r.done&&r.doneAt?' · restocked '+esc(fmtDT(r.doneAt)):''}</small></span></div>`;
+ const G=j=>`<div class="card ordg"><div class="ordjh" onclick="editJob('${j.id}')"><b>${esc(jName(j))}</b></div>${j.restock.map(r=>row(j,r)).join('')}</div>`;
+ return jSearchBox(L.length)+`<div class="card"><h2 style="margin:0">🔧 Restock the truck</h2><small style="color:var(--m)">Parts the crew used from truck stock, from the Finish job checklist. Tick each one when it's replaced.</small></div>`
+  +(op.length?op.map(G).join(''):'<div class="card" style="color:var(--m)">Nothing to restock right now.</div>')+(dn.length?`<details class="card"><summary>Restocked (${dn.length} job${dn.length>1?'s':''})</summary>${dn.map(G).join('')}</details>`:'')};
+{const _js=GROUPS.jobs.subs;GROUPS.jobs.subs=()=>{const a=_js();if(!isOwner())return a;const n=rsOpenN();return a.concat([['restock','Restock'+(n?' ('+n+')':'')]])}}
+
+</script>
+<style>.finbar{background:#eef8f0;border:1px solid #cde8d3;border-radius:10px;padding:10px 12px;margin:8px 0 10px;display:flex;flex-direction:column;gap:6px}.finbar.done{background:#f4f6f8;border-color:#e1e5ea}.finbtn{background:#1e8e3e!important;font-size:17px;padding:12px}.pill.rdy{background:#fff3cd;color:#7a5a00}.rdyrow{display:flex;gap:10px;align-items:center;border-top:1px solid #eee;padding:8px 0}.rdycard{border-left:4px solid #1e8e3e}</style>
 <script type="module">
 /* ================================================================
    FIREBASE CONFIG — paste your config from Firebase Console here
@@ -1461,11 +1646,12 @@ async function start(){
       // billingJobs/{jobId}: ONLY job number + customer name, for the read-only Billing role (job docs can hold quote/price links)
       {const pb=full?{}:(last.bj||{}),cb={};(D.jobs||[]).forEach(j=>{if(!j.id)return;const c=(D.clients||[]).find(x=>x.id==j.client);const v={num:j.num||'',clientName:(c&&c.name)||j.clientName||''};const sv=stable(v);cb[j.id]=sv;if(pb[j.id]!==sv)ops.push(['set',F.doc(co,'billingJobs',j.id),v])});
         for(const id in pb)if(!(id in cb))ops.push(['del',F.doc(co,'billingJobs',id)]);last.bj=cb}
+      {const nm=[...new Set((D.parts||[]).map(p=>String(p.name||'').trim()).filter(Boolean))].sort();const sn=JSON.stringify(nm);if(full||sn!==last.pn)ops.push(['set',F.doc(co,'partNames','list'),{names:nm,at:new Date().toISOString()}]);last.pn=sn}
       const m=stable(meta(D));if(full||m!==last.meta){ops.push(['set',metaRef,clean(meta(D))]);const S=D.settings;ops.push(['set',pubRef,clean({company:S.company||'',phone:S.phone||''})])}last.meta=m;
     }else if(role==='tech'){
       for(const k in TECHW){const {f,del}=TECHW[k],c=SPEC[k].c,pt=last[k]||{},cur={};(D[k]||[]).forEach(t=>{const s=stable(t);cur[t.id]=s;if(pt[t.id]!==s&&t[f]===me)ops.push(['set',F.doc(co,c,t.id),clean(t)])});
         if(del)for(const id in pt)if(!(id in cur)&&JSON.parse(pt[id])[f]===me)ops.push(['del',F.doc(co,c,id)]);last[k]=cur}
-      const pj=last.jobs||{},cj={};(D.jobs||[]).forEach(j=>{const s=stable(j);cj[j.id]=s;if(pj[j.id]&&pj[j.id]!==s){const o=JSON.parse(pj[j.id]);if(stable(o.techNotes)!==stable(j.techNotes)||stable(o.checklist)!==stable(j.checklist))ops.push(['upd',F.doc(co,'jobs',j.id),{techNotes:j.techNotes||'',checklist:clean(j.checklist||[]),updatedBy:me}])}});last.jobs=cj;
+      const pj=last.jobs||{},cj={};(D.jobs||[]).forEach(j=>{const s=stable(j);cj[j.id]=s;if(pj[j.id]&&pj[j.id]!==s){const o=JSON.parse(pj[j.id]);const fin=o.status!==j.status&&j.status==='Completed'&&j.finishedBy===me;if(fin||stable(o.techNotes)!==stable(j.techNotes)||stable(o.checklist)!==stable(j.checklist))ops.push(['upd',F.doc(co,'jobs',j.id),Object.assign({techNotes:j.techNotes||'',checklist:clean(j.checklist||[]),updatedBy:me},fin?Object.assign({status:'Completed',finishedBy:me,finishedByName:j.finishedByName||'',finishedAt:j.finishedAt},j.restock?{restock:clean(j.restock)}:{},j.finishSummary?{finishSummary:clean(j.finishSummary)}:{}):{})])}});last.jobs=cj;
     }
     await commit(ops);
   }
@@ -1494,6 +1680,7 @@ async function start(){
       listenCol('notes',F.query(F.collection(co,'notes'),F.where('techEmails','array-contains',me)));
       listenCol('leads',F.query(F.collection(co,'leads'),F.where('by','==',me)));
       listenCol('orders',F.query(F.collection(co,'orderItems'),F.where('techEmails','array-contains',me)));
+      unsubs.push(F.onSnapshot(F.doc(co,'partNames','list'),s=>{window.cpPartNames=(s.exists()&&s.data().names)||[]},()=>{}));
       unsubs.push(F.onSnapshot(pubRef,s=>{if(!s.exists())return;const D=getD();Object.assign(D.settings,s.data());apply(D,s)},err));
     }
   }
@@ -1540,7 +1727,8 @@ async function start(){
         async saveSub(s){await F.setDoc(F.doc(co,'pushSubs',await subId(s.endpoint)),{email:me,role,endpoint:s.endpoint,keys:{p256dh:s.keys.p256dh,auth:s.keys.auth},ua:navigator.userAgent.slice(0,200),at:new Date().toISOString()})},
         async delSub(ep){await F.deleteDoc(F.doc(co,'pushSubs',await subId(ep)))},
         async getPrefs(){const d=await F.getDoc(F.doc(co,'pushPrefs',me));return d.exists()?d.data():{}},
-        async setPrefs(p){await F.setDoc(F.doc(co,'pushPrefs',me),Object.assign({},p,{email:me,at:new Date().toISOString()}))}};
+        async setPrefs(p){await F.setDoc(F.doc(co,'pushPrefs',me),Object.assign({},p,{email:me,at:new Date().toISOString()}))},
+        async openPing(){await F.setDoc(F.doc(co,'openPings',me),{email:me,at:new Date().toISOString()})}}; // owners only (rules); a function sends the open to-do push
       window.cpNotes=null;
       if(role==='owner'){ // owner notes: companies/main/ownerNotes, private unless shared (see firestore.rules)
         const NC=F.collection(co,'ownerNotes');const got={mine:[],shared:[]};const emit=()=>window.onNotesData&&window.onNotesData(got.mine,got.shared);
