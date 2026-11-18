@@ -18,7 +18,10 @@ input,select,textarea{width:100%;padding:9px;border:1px solid #c5cfda;border-rad
 .row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:140px}.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;background:#e7edf4}
 .Scheduled,.Draft{background:#e7edf4}.In.Progress,.Sent{background:#fff1c9}.Completed,.Approved{background:#d4f3df}.Invoiced{background:#dde8ff}.Paid{background:#c7f0d8}.Declined{background:#f9d6d2}
 .sample{font-size:10px;background:#ffe2a8;padding:1px 5px;border-radius:4px;margin-left:4px}h2{margin:0 0 10px;font-size:18px}
-.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:20px 8px;z-index:9}.modal>div{background:#fff;border-radius:10px;padding:18px;width:100%;max-width:760px}
+.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:20px 8px calc(20px + env(safe-area-inset-bottom));z-index:40;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.modal.md-under{visibility:hidden;pointer-events:none}
+body.cp-sheet-open{overflow:hidden;width:100%;overscroll-behavior:none}
+html.cp-sheet-open{overflow:hidden;overscroll-behavior:none}.modal>div{background:#fff;border-radius:10px;padding:18px;width:100%;max-width:760px}
 .clk{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--l);flex-wrap:wrap}.on-clock{color:#1e8e4e;font-weight:600}
 .qv{max-width:800px;margin:auto;background:#fff;padding:32px;border:1px solid var(--l)}.qv .tot td{font-weight:700}.right{text-align:right}
 @media print{header,nav,.noprint{display:none!important}main{padding:0}.qv{border:0}body{background:#fff}}
@@ -139,7 +142,55 @@ const hrs=e=>Math.round(Math.max(0,tMs(e))/9e5)/4; // billed/paid hours: each en
 const hmx=h=>{const m=Math.round(Math.max(0,h)*60);return Math.floor(m/60)+':'+String(m%60).padStart(2,'0')};
 const hx=h=>`<small class="hx" title="Exact clock time (h:mm). Hours are rounded to the nearest 15 min.">${hmx(h)}</small>`;const fmtDT=d=>d?new Date(d).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
 function weekStart(d){d=new Date(d);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
-function blank(){return{settings:{company:'Central Plumbing',rate:95,fee:89,tax:7.5,phone:'308-390-8535',email:''},workers:[],clients:[],quotes:[],jobs:[],time:[],parts:[],templates:[],invoices:[],recurring:[],checklistTemplates:[],users:[],notes:[],leads:[],messages:[],priceImports:[],orders:[],seq:{q:1001,j:1,i:1001}}}
+/* ---------- Multi-day jobs (Apple Calendar-style start → end) ----------
+   when = start (existing datetime-local). Optional whenEnd = YYYY-MM-DD or YYYY-MM-DDTHH:MM.
+   No whenEnd, or an end on the start date, means a single-day job. Existing jobs need no migration. */
+const MD_MAX=60;
+function mdDay(s){s=String(s||'');return /^\d{4}-\d\d-\d\d/.test(s)?s.slice(0,10):''}
+function mdStart(j){return mdDay(j&&j.when)}
+function mdEnd(j){const e=mdDay(j&&j.whenEnd),a=mdStart(j);return e&&e>a?e:a}
+function mdMulti(j){return !!(j&&mdDay(j.whenEnd)&&mdDay(j.whenEnd)>mdStart(j))}
+function mdAdd(d,n){const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)}
+function mdDays(j){const a=mdStart(j),b=mdEnd(j);if(!a)return[];const o=[];for(let d=a,n=0;d<=b&&n<MD_MAX;n++,d=mdAdd(d,1))o.push(d);return o}
+function mdOn(j,day){const a=mdStart(j);return !!(a&&day&&a<=day&&mdEnd(j)>=day)}
+function mdOver(j,a,b){const s=mdStart(j);return !!(s&&s<b&&mdEnd(j)>=a)}
+function mdIdx(j,day){const d=mdDays(j),i=d.indexOf(day);return i<0?null:{i:i+1,n:d.length}}
+function mdTag(j,day){const x=mdIdx(j,day);return x&&x.n>1?('Day '+x.i+' of '+x.n):''}
+function mdToday(){return typeof ctYmd=='function'?ctYmd(new Date()):(typeof tod=='function'?tod():ymd(new Date()))}
+function mdPill(j,day){const t=mdTag(j,day||(mdOn(j,mdToday())?mdToday():mdStart(j)));return t?` <span class="pill">${esc(t)}</span>`:''}
+function mdFmt(j){if(!j||!j.when)return '';if(!mdMulti(j))return fmtDT(j.when);
+  const a=new Date(j.when),e=String(j.whenEnd||''),hasT=e.length>10,b=new Date((hasT?e:mdDay(e)+'T12:00:00'));
+  const ds=a.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'}),de=b.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
+  const ts=a.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+  return hasT?`${ds}, ${ts} – ${de}, ${b.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`:`${ds}, ${ts} – ${de}`}
+function mdDaysInView(j){let days=mdDays(j);if(!days.length)return days;const t=mdToday();
+  if(typeof jf!='undefined'&&jf.date)return days.filter(k=>k==jf.date);
+  if(typeof jf!='undefined'&&jf.range=='today')return days.filter(k=>k==t);
+  if(typeof jf!='undefined'&&jf.range=='week'){const ws=ymd(weekStart(new Date()));const we=typeof addDays=='function'?addDays(ws,7):ymd(new Date(+weekStart(new Date())+7*864e5));return days.filter(k=>k>=ws&&k<we)}
+  return days}
+function mdValid(){const box=$('#jmd');if(!box)return true;const start=($('#jw')?.value||'');
+  if(!box.checked||!start)return true;const ed=$('#jwe')?.value||'';
+  if(!ed){cpNote('Pick an end date for this multi-day job.');return false}
+  if(ed<=start.slice(0,10)){cpNote('The end date needs to be after the start date.');return false}
+  if(mdDays({when:start,whenEnd:ed}).length>=MD_MAX){cpNote('A job can run at most 60 days.');return false}
+  return true}
+function mdApply(j){const box=$('#jmd');if(!box)return true;if(!mdValid())return false;
+  const start=($('#jw')?.value||'');
+  if(!box.checked||!start){delete j.whenEnd;return true}
+  const ed=$('#jwe').value,et=($('#jwet')?.value||'');j.whenEnd=et?ed+'T'+et:ed;return true}
+function mdToggle(){const on=$('#jmd')?.checked,f=$('#mdfields');if(f)f.style.display=on?'':'none';
+  if(on){const s=($('#jw')?.value||'').slice(0,10);if(s&&$('#jwe')&&!$('#jwe').value)$('#jwe').value=mdAdd(s,1)}}
+function mdForm(id){const jw=$('#jw');if(!jw||$('#jmd'))return;const j=id?J(id)||{}:{};const multi=mdMulti(j);
+  const end=mdDay(j.whenEnd),endT=j.whenEnd&&String(j.whenEnd).length>10?String(j.whenEnd).slice(11,16):'';
+  const col=jw.closest('.row')||jw.parentElement;
+  col.insertAdjacentHTML('afterend',`<div id="mdwrap" style="margin-top:8px"><label style="display:inline-flex;gap:8px;align-items:center;color:var(--t);font-size:14px;font-weight:600"><input type="checkbox" id="jmd" style="width:auto" ${multi?'checked':''} onchange="mdToggle()"> Multi-day</label>
+   <small style="color:var(--m);display:block;margin:2px 0 6px">Like a calendar event: this job shows on every day from the start date through the end date.</small>
+   <div id="mdfields" style="display:${multi?'':'none'}"><div class="row" style="align-items:end"><div><label>End date</label><input id="jwe" type="date" value="${esc(end)}"></div><div><label>End time (optional)</label><input id="jwet" type="time" value="${esc(endT)}"></div></div></div></div>`)}
+function mdShiftTo(j,start){const n=mdDays(j).length,t=(start.split('T')[1]||(j.when||'T08:00').slice(11,16)||'08:00');
+  const day=mdDay(start);j.when=day+'T'+t;
+  if(n>1){const et=String(j.whenEnd||'').length>10?String(j.whenEnd).slice(11,16):'';j.whenEnd=et?mdAdd(day,n-1)+'T'+et:mdAdd(day,n-1)}
+  else delete j.whenEnd}
+function blank(){return{settings:{company:'Central Plumbing',rate:95,fee:89,tax:7.5,phone:'308-390-8535',email:''},workers:[],clients:[],quotes:[],jobs:[],time:[],parts:[],templates:[],invoices:[],recurring:[],checklistTemplates:[],users:[],notes:[],leads:[],messages:[],priceImports:[],orders:[],used:[],seq:{q:1001,j:1,i:1001}}}
 function load(){try{D=JSON.parse(localStorage.getItem(K))}catch(e){}if(!D){D=blank()}}
 function save(){localStorage.setItem(K,JSON.stringify(D));if(window.cloudSave)window.cloudSave()}
 window.getD=()=>D;window.setD=x=>{D=x;localStorage.setItem(K,JSON.stringify(D))};window.rerender=()=>{if(!$('#modal').innerHTML)render();else{window._pendingRender=true;if($('#olist')&&!window._ordEdit&&typeof drawOrd=='function')drawOrd()}};
@@ -171,20 +222,27 @@ window.__boot=1;window.__bootPending=0;addEventListener('DOMContentLoaded',()=>{
 function render(){if(window.__boot){window.__bootPending=1;return}if(!D.settings.company||D.settings.company=='Your Plumbing Co.')D.settings.company='Central Plumbing';if(!D.settings.phone)D.settings.phone='308-390-8535';$('#cname').innerHTML='<img src="logo-mono-white.png" alt="" class="hlogo">'+esc(D.settings.company);$('#today').textContent=new Date().toDateString();
  $('#nav').innerHTML=TABS.map(([k,v])=>`<button class="${k==tab?'on':''}" onclick="go('${k}')">${v}</button>`).join('');$('#app').innerHTML=(V[tab]||V.dash)()}
 function go(t){tab=t;view=null;render();scrollTo(0,0)}
-function modal(h){$('#modal').innerHTML=h?`<div class="modal" onclick="if(event.target==this)modal()"><div>${h}</div></div>`:''}
+let _sheetY=0,_sheetLocks=0,_sheetPushed=0,_sheetIgnorePop=false;
+function cpLockScroll(){if(_sheetLocks++)return;_sheetY=window.scrollY||window.pageYOffset||0;const b=document.body,r=document.documentElement;b.classList.add('cp-sheet-open');r.classList.add('cp-sheet-open');b.style.position='fixed';b.style.top='-'+_sheetY+'px';b.style.left='0';b.style.right='0';b.style.width='100%';b.style.overflow='hidden';r.style.overflow='hidden';r.style.overscrollBehavior='none'}
+function cpUnlockScroll(){if(!_sheetLocks||--_sheetLocks)return;const b=document.body,r=document.documentElement,y=_sheetY;b.classList.remove('cp-sheet-open');r.classList.remove('cp-sheet-open');b.style.position=b.style.top=b.style.left=b.style.right=b.style.width=b.style.overflow='';r.style.overflow=r.style.overscrollBehavior='';_sheetLocks=0;requestAnimationFrame(()=>{window.scrollTo(0,y);requestAnimationFrame(()=>window.scrollTo(0,y))})}
+function cpSheetPushHist(){try{history.pushState({cpSheet:(_sheetPushed+1)},'')}catch(e){}_sheetPushed++}
+function cpSheetPopHist(){if(!_sheetPushed)return;_sheetPushed--;_sheetIgnorePop=true;try{history.back()}catch(e){_sheetIgnorePop=false}}
+function _popSheet(fromHist){const box=$('#modal');if(!box)return;const sheets=[...box.querySelectorAll(':scope > .modal')];const top=sheets.pop();if(top)top.remove();const prev=sheets[sheets.length-1];if(prev)prev.classList.remove('md-under');else{box.innerHTML='';cpUnlockScroll();if(window._pendingRender){window._pendingRender=false;try{render()}catch(e){}}}if(fromHist){if(_sheetPushed)_sheetPushed--}else cpSheetPopHist()}
+function modal(h){const box=$('#modal');if(!box)return;if(h){const prev=box.querySelectorAll(':scope > .modal');prev.forEach(m=>m.classList.add('md-under'));if(!prev.length)cpLockScroll();const el=document.createElement('div');el.className='modal';el.setAttribute('role','dialog');el.onclick=e=>{if(e.target===el)modal()};el.innerHTML=`<div>${h}</div>`;box.appendChild(el);cpSheetPushHist()}else _popSheet()}
+function modalClear(){const box=$('#modal');const n=box?box.querySelectorAll(':scope > .modal').length:0;if(box)box.innerHTML='';if(n)cpUnlockScroll();if(_sheetPushed){const k=_sheetPushed;_sheetPushed=0;_sheetIgnorePop=true;try{history.go(-k)}catch(e){}_sheetIgnorePop=false}}
 const opt=(arr,sel,blankLbl)=>(blankLbl!=null?`<option value="">${blankLbl}</option>`:'')+arr.map(([v,l])=>`<option value="${esc(v)}" ${v==sel?'selected':''}>${esc(l)}</option>`).join('');
 const V={};
-V.dash=()=>{const t=ymd(new Date()),ws=weekStart(new Date());const open=D.jobs.filter(j=>['Scheduled','In Progress'].includes(j.status)),today=D.jobs.filter(j=>j.when&&j.when.slice(0,10)==t);
+V.dash=()=>{const t=ymd(new Date()),ws=weekStart(new Date());const open=D.jobs.filter(j=>['Scheduled','In Progress'].includes(j.status)),today=D.jobs.filter(j=>mdOn(j,t));
  const wh=D.time.filter(e=>isDayT(e)&&new Date(e.in)>=ws).reduce((s,e)=>s+hrs(e),0),pend=D.quotes.filter(q=>['Draft','Sent'].includes(q.status));const pt=pend.reduce((s,q)=>s+qTotals(q).total,0);
  const on=D.time.filter(e=>!e.out&&isDayT(e));
  return `<div class="grid"><div class="card stat"><div class="n">${open.length}</div><div class="k">Open jobs</div></div><div class="card stat"><div class="n">${today.length}</div><div class="k">Jobs today</div></div><div class="card stat"><div class="n">${wh.toFixed(1)}</div><div class="k">Hours this week</div></div><div class="card stat"><div class="n">${money(pt)}</div><div class="k">Pending quotes (${pend.length})</div></div></div>
  <div class="card"><h2>Today's jobs</h2>${jobTable(today)}</div><div class="card"><h2>On the clock now</h2>${on.length?on.map(e=>`<div>${esc(W(e.worker)?.name)} — since ${fmtDT(e.in)} ${e.job?'· '+esc(jName(J(e.job))):''}</div>`).join(''):'<span style="color:var(--m)">Nobody clocked in.</span>'}</div>
  <div class="card noprint"><button class="btn" onclick="go('quotes');editQuote()">+ New quote</button><button class="btn" onclick="go('jobs');editJob()">+ New job</button><button class="btn s" onclick="go('clock')">Time clock</button></div>`};
-function jobTable(list){if(!list.length)return '<span style="color:var(--m)">No jobs.</span>';return `<div class="tw"><table><tr><th>Customer / job</th><th>Address</th><th>When</th><th>Workers</th><th>Status</th><th>Hours</th><th></th></tr>${list.sort((a,b)=>(a.when||'').localeCompare(b.when||'')||byJobNum(a,b)).map(j=>`<tr><td><b>${esc(jCust(j))}</b>${jNo(j)}${tag(j)}${rdyB(j)}<br><small>${esc(j.desc)}</small>${jcBar(j)}</td><td><small>${esc(j.clientAddress||C(j.client)?.address||'')}</small></td><td>${fmtDT(j.when)}</td><td>${wChips(j.workers)}</td><td><span class="pill ${j.status}">${j.status}</span></td><td>${jobHours(j.id).toFixed(1)}</td><td><button class="btn sm s" onclick="editJob('${j.id}')">Open</button></td></tr>`).join('')}</table></div>`}
+function jobTable(list,day){if(!list.length)return '<span style="color:var(--m)">No jobs.</span>';return `<div class="tw"><table><tr><th>Customer / job</th><th>Address</th><th>When</th><th>Workers</th><th>Status</th><th>Hours</th><th></th></tr>${list.sort((a,b)=>(a.when||'').localeCompare(b.when||'')||byJobNum(a,b)).map(j=>`<tr><td><b>${esc(jCust(j))}</b>${jNo(j)}${mdPill(j,day)}${tag(j)}${rdyB(j)}<br><small>${esc(j.desc)}</small>${jcBar(j)}</td><td><small>${esc(j.clientAddress||C(j.client)?.address||'')}</small></td><td>${esc(mdFmt(j)||fmtDT(j.when))}</td><td>${wChips(j.workers)}</td><td><span class="pill ${j.status}">${j.status}</span></td><td>${jobHours(j.id).toFixed(1)}</td><td><button class="btn sm s" onclick="editJob('${j.id}')">Open</button></td></tr>`).join('')}</table></div>`}
 let jf={status:'',worker:'',range:'all',date:'',q:''};
 V.jobs=()=>{let L=D.jobs.slice();const t=ymd(new Date()),ws=weekStart(new Date()),we=new Date(ws);we.setDate(we.getDate()+7);
  if(jf.q&&jf.q.trim())L=L.filter(j=>jobMatch(j,jf.q));if(jf.status)L=L.filter(j=>j.status==jf.status);if(jf.worker)L=L.filter(j=>j.workers.includes(jf.worker));
- if(jf.range=='today')L=L.filter(j=>j.when&&j.when.slice(0,10)==t);if(jf.range=='week')L=L.filter(j=>j.when&&new Date(j.when)>=ws&&new Date(j.when)<we);if(jf.date)L=L.filter(j=>j.when&&j.when.slice(0,10)==jf.date);if(jf.range=='ready')L=L.filter(jReady);
+ if(jf.range=='today')L=L.filter(j=>mdOn(j,t));if(jf.range=='week')L=L.filter(j=>mdOver(j,ymd(ws),ymd(we)));if(jf.date)L=L.filter(j=>mdOn(j,jf.date));if(jf.range=='ready')L=L.filter(jReady);
  return jSearchBox(L.length)+`<div class="card"><div class="row" style="align-items:end"><div><label>Status</label><select onchange="jf.status=this.value;render()">${opt(JS.map(s=>[s,s]),jf.status,'All')}</select></div><div><label>Worker</label><select onchange="jf.worker=this.value;render()">${opt(D.workers.map(w=>[w.id,w.name]),jf.worker,'All')}</select></div><div><label>View</label><select onchange="jf.range=this.value;render()">${opt([['all','All dates'],['today','Today'],['week','This week'],['unsched','Unscheduled'],...(isOwner()?[['ready','Ready to invoice']]:[])],jf.range)}</select></div><div><label>Date</label><input type="date" value="${jf.date}" onchange="jf.date=this.value;render()"></div><div style="flex:0"><button class="btn" onclick="editJob()">+ Job</button></div></div></div><div class="card">${jobTable(L)}</div>`};
 function editJob(id,fromQuote){const j=id?J(id):Object.assign({id:'',num:'',client:'',desc:'',workers:[],when:'',status:'Scheduled',quote:''},fromQuote||{});
  const te=id?mergeT(D.time.filter(t=>isJobT(t)&&t.job==id)):[];
@@ -192,14 +250,14 @@ function editJob(id,fromQuote){const j=id?J(id):Object.assign({id:'',num:'',clie
  <div class="row"><div><label>Scheduled</label><input id="jw" type="datetime-local" value="${j.when||''}"><small style="color:var(--m);display:block;margin-top:3px">Leave blank = Unscheduled. <a href="#" onclick="event.preventDefault();$('#jw').value=''" data-tip="Clear the date so this job goes to the Unscheduled list">Clear date</a></small></div><div><label>Status</label><select id="js">${opt(JS.map(s=>[s,s]),j.status)}</select></div><div><label>Linked quote</label><select id="jq">${opt(D.quotes.map(q=>[q.id,q.num+' · '+(C(q.client)?.name||'')]),j.quote,'None')}</select></div></div>
  <label>Assigned workers</label><div>${D.workers.map(w=>`<label style="display:inline-flex;gap:4px;margin-right:12px;color:var(--t);font-size:14px"><input type="checkbox" style="width:auto" class="jwk" value="${w.id}" ${j.workers.includes(w.id)?'checked':''}>${wChip(w.id)}</label>`).join('')||'<i>Add workers first</i>'}</div>
  ${id?`<h3 style="font-size:15px">Hours logged: ${jobHours(id).toFixed(2)} · Labor cost ${money(te.reduce((s,t)=>s+hrs(t)*(W(t.worker)?.rate||0),0))}</h3><div class="tw"><table>${te.map(t=>`<tr><td>${esc(W(t.worker)?.name)}</td><td>${fmtDT(t.in)} – ${t.out?fmtDT(t.out):'<b class="on-clock">on clock</b>'}${tPartsNote(t)}</td><td>${hrs(t).toFixed(2)}${hx(hrsX(t))}h</td></tr>`).join('')}</table></div>`:''}
- <div style="margin-top:14px"><button class="btn" onclick="saveJob('${id||''}')">Save</button>${j.quote?`<button class="btn s" onclick="modal();viewQuote('${j.quote}')">View quote</button>`:''}${id?`<button class="btn d" onclick="if(confirm('Delete job?')){D.jobs=D.jobs.filter(x=>x.id!='${id}');save();modal();render()}">Delete</button>`:''}<button class="btn s" onclick="modal()">Cancel</button></div>`)}
+ <div style="margin-top:14px"><button class="btn" onclick="saveJob('${id||''}')">Save</button>${j.quote?`<button class="btn s" onclick="modalClear();viewQuote('${j.quote}')">View quote</button>`:''}${id?`<button class="btn d" onclick="if(confirm('Delete job?')){D.jobs=D.jobs.filter(x=>x.id!='${id}');save();modal();render()}">Delete</button>`:''}<button class="btn s" onclick="modal()">Cancel</button></div>`)}
 const CLSORT=new Intl.Collator(undefined,{numeric:true,sensitivity:'base'});
 function clientPicker(sel){return `<div class="row"><div><label>Client</label><select id="cl" onchange="document.getElementById('nc').style.display=this.value=='__new'?'flex':'none'"><option value="" hidden ${sel?'':'selected'}>— choose —</option><option value="__new">+ New client…</option>${opt(D.clients.map(c=>[c.id,c.name]).sort((a,b)=>CLSORT.compare(String(a[1]||'').trim(),String(b[1]||'').trim())),sel)}</select></div></div><div id="nc" class="row" style="display:none"><div><label>Name</label><input id="ncn"></div><div><label>Phone</label><input id="ncp" type="tel"></div><div><label>Address</label><input id="nca"></div></div>`}
 function pickClient(){let v=$('#cl').value;if(v=='__new'){const n=$('#ncn').value.trim();if(!n){alert('Client name required');return null}const c={id:uid(),name:n,phone:$('#ncp').value,address:$('#nca').value,email:''};D.clients.push(c);v=c.id}if(!v){alert('Choose a client');return null}return v}
 function jobNumN(n){const m=/^J-(\d+)$/.exec(n||'');return m?+m[1]:0}
 function nextJobNum(){const mx=D.jobs.reduce((m,j)=>Math.max(m,jobNumN(j.num)),0);let s=+D.seq.j||1;if(s>=1000&&mx<1000)s=1;s=Math.max(s,mx+1);D.seq.j=s+1;return 'J-'+String(s).padStart(4,'0')}
 const byJobNum=(a,b)=>jobNumN(a.num)-jobNumN(b.num)||String(a.num||'').localeCompare(String(b.num||''));
-function saveJob(id){const cl=pickClient();if(!cl)return;let j=id?J(id):{id:uid(),num:nextJobNum()};Object.assign(j,{client:cl,desc:$('#jd').value,when:$('#jw').value,status:$('#js').value,quote:$('#jq').value,workers:[...document.querySelectorAll('.jwk:checked')].map(x=>x.value)});if(!id)D.jobs.push(j);save();modal();render()}
+function saveJob(id){const cl=pickClient();if(!cl)return;let j=id?J(id):{id:uid(),num:nextJobNum()};Object.assign(j,{client:cl,desc:$('#jd').value,when:$('#jw').value,status:$('#js').value,quote:$('#jq').value,workers:[...document.querySelectorAll('.jwk:checked')].map(x=>x.value)});if(!mdApply(j))return;if(!id)D.jobs.push(j);save();modal();render()}
 V.quotes=()=>{if(view)return quoteDoc(Q(view));return `<div class="card"><button class="btn" onclick="editQuote()">+ New quote</button></div><div class="card"><div class="tw"><table><tr><th>Quote</th><th>Client</th><th>Date</th><th>Status</th><th class="right">Total</th><th></th></tr>${D.quotes.slice().reverse().map(q=>`<tr><td>${esc(q.num)}${tag(q)}</td><td>${cname(q.client)}</td><td>${q.date}</td><td><span class="pill ${q.status}">${q.status}</span></td><td class="right">${money(qTotals(q).total)}</td><td><button class="btn sm s" onclick="viewQuote('${q.id}')">View</button><button class="btn sm s" onclick="editQuote('${q.id}')">Edit</button></td></tr>`).join('')||'<tr><td colspan=6>No quotes yet.</td></tr>'}</table></div></div>`};
 function viewQuote(id){tab='quotes';view=id;render();scrollTo(0,0)}
 function quoteDoc(q){const t=qTotals(q),c=C(q.client)||{},s=D.settings,job=D.jobs.find(j=>j.quote==q.id);
@@ -219,7 +277,7 @@ function editQuote(id){const q=id?Q(id):{client:'',date:ymd(new Date()),status:'
 function addLi(t){qi.push(t=='labor'?{type:t,desc:'Labor',qty:1,price:D.settings.rate}:t=='fee'?{type:t,desc:'Service call / trip fee',qty:1,price:D.settings.fee}:{type:t,desc:'',qty:1,price:0});drawLi()}
 function drawLi(){$('#qitems').innerHTML=qi.map((i,n)=>`<div class="row" style="margin-bottom:6px;align-items:center"><select style="flex:0 0 105px;min-width:0" onchange="qi[${n}].type=this.value">${opt([['labor','Labor'],['part','Part'],['fee','Fee']],i.type)}</select><input style="flex:3" placeholder="Description" value="${esc(i.desc)}" oninput="qi[${n}].desc=this.value"><input style="flex:0 0 75px;min-width:0" type="number" step="0.25" title="${i.type=='labor'?'Hours':'Qty'}" value="${i.qty}" oninput="qi[${n}].qty=+this.value;qtot()"><input style="flex:0 0 95px;min-width:0" type="number" step="0.01" title="Rate/price" value="${i.price}" oninput="qi[${n}].price=+this.value;qtot()"><button class="btn sm d" style="flex:0" onclick="qi.splice(${n},1);drawLi()">✕</button></div>`).join('');qtot()}
 function qtot(){const t=qTotals({items:qi,tax:+$('#qt').value});$('#qtot').textContent='Subtotal '+money(t.sub)+' · Tax '+money(t.tax)+' · Total '+money(t.total)}
-function saveQuote(id){const cl=pickClient();if(!cl)return;let q=id?Q(id):{id:uid(),num:'Q-'+D.seq.q++};Object.assign(q,{client:cl,date:$('#qd').value,status:$('#qs').value,tax:+$('#qt').value,notes:$('#qn').value,items:qi});if(!id)D.quotes.push(q);save();modal();viewQuote(q.id)}
+function saveQuote(id){const cl=pickClient();if(!cl)return;let q=id?Q(id):{id:uid(),num:'Q-'+D.seq.q++};Object.assign(q,{client:cl,date:$('#qd').value,status:$('#qs').value,tax:+$('#qt').value,notes:$('#qn').value,items:qi});if(!id)D.quotes.push(q);save();modalClear();viewQuote(q.id)}
 V.clock=()=>`<div class="card"><h2>Time clock</h2>${D.workers.map(w=>{const e=D.time.find(t=>t.worker==w.id&&!t.out);return `<div class="clk" style="border-left:6px solid ${wCol(w.id)};padding-left:10px"><div>${wChip(w.id)}${tag(w)}<br>${e?`<span class="on-clock">On clock since ${fmtDT(e.in)} (${hmx(hrsX(e))})${e.job?' · '+esc(jName(J(e.job))):''}</span>`:'<small style="color:var(--m)">Off clock</small>'}</div><div style="display:flex;gap:6px;align-items:center">${e?`<button class="btn d" onclick="clockOut('${e.id}')">Clock out</button>`:`<select id="cj_${w.id}" style="width:auto;max-width:170px">${opt(jSorted(D.jobs.filter(j=>j.status!='Paid')).map(j=>[j.id,jOptT(j)]),'','No job')}</select><button class="btn g" onclick="clockIn('${w.id}')">Clock in</button>`}</div></div>`}).join('')||'Add workers in the Workers tab.'}</div>
  <div class="card"><h2>Recent entries</h2>${timeTable(D.time.slice().sort((a,b)=>b.in.localeCompare(a.in)).slice(0,15))}<button class="btn s" onclick="editTime()">+ Manual entry</button></div>`;
 function clockIn(w){D.time.push({id:uid(),worker:w,job:$('#cj_'+w).value,in:new Date().toISOString(),out:null});save();render()}
@@ -260,7 +318,7 @@ load();render();setInterval(()=>{if(!$('#modal').innerHTML&&(tab=='clock'||tab==
 /* ===== Price book, parts catalog & profit (owner-only cost data) ===== */
 const OWNER_EMAILS=['cdbonser@gmail.com','thecentralplumber@gmail.com'];
 const isOwner=()=>window.userRole?window.userRole==='owner':(!window.userEmail||OWNER_EMAILS.includes(String(window.userEmail).toLowerCase())); // offline/unconfigured = single-device owner
-function norm(x){if(!x)return x;['workers','clients','quotes','jobs','time','parts','templates','invoices','recurring','checklistTemplates','users','notes','leads','messages','priceImports','orders'].forEach(k=>{if(!Array.isArray(x[k]))x[k]=[]});x.seq=Object.assign({q:1001,j:1,i:1001},x.seq||{});x.settings=x.settings||blank().settings;return x}
+function norm(x){if(!x)return x;['workers','clients','quotes','jobs','time','parts','templates','invoices','recurring','checklistTemplates','users','notes','leads','messages','priceImports','orders','used'].forEach(k=>{if(!Array.isArray(x[k]))x[k]=[]});x.seq=Object.assign({q:1001,j:1,i:1001},x.seq||{});x.settings=x.settings||blank().settings;return x}
 norm(D);
 
 {const _setD=window.setD;window.setD=x=>_setD(norm(x))}
@@ -378,7 +436,7 @@ window.OWNER_LIST=OWNER_EMAILS;
 const ME=()=>String(window.userEmail||'').toLowerCase();
 const isBilling=()=>window.userRole==='billing';const isTech=()=>!isOwner()&&!isBilling();
 const myWorkerId=()=>window.userWorkerId||(D.users.find(u=>u.id==ME())||{}).workerId||'';
-const TECH_TABS=['dash','cal','jobs','clock','sheets'];
+const TECH_TABS=['dash','cal','jobs','clock','sheets','used'];
 const PAL=['#D7262E','#1f6feb','#1e8e4e','#8e44ad','#e67e22','#16a085','#c2185b','#5d4037','#455a64','#b8860b'];
 const wColor=id=>id?wCol(id):'#888';
 const tod=()=>ymd(new Date());
@@ -415,11 +473,11 @@ function jobDayLabel(k,t){const add=n=>{const d=new Date(t+'T12:00:00Z');d.setUT
  return k==t?'Today · '+nice:k==add(1)?'Tomorrow · '+nice:k==add(-1)?'Yesterday · '+nice:nice}
 function jobDays(L){if(!L.length)return '<div class="card"><span style="color:var(--m)">No jobs.</span></div>';
  const t=ctYmd(new Date()),G={},none=[];
- const noneC=[];L.forEach(j=>{const k=j.when&&/^\d{4}-\d\d-\d\d/.test(j.when)?j.when.slice(0,10):'';if(!k)(isUnsched(j)?none:noneC).push(j);else(G[k]=G[k]||[]).push(j)});
+ const noneC=[];L.forEach(j=>{const days=mdDaysInView(j);if(!days.length){if(!mdStart(j))(isUnsched(j)?none:noneC).push(j)}else days.forEach(k=>(G[k]=G[k]||[]).push(j))});
  if(jf.range=='unsched'){for(const k in G)delete G[k];noneC.length=0;if(!none.length)return '<div class="card"><span style="color:var(--m)">No unscheduled jobs. Nice!</span></div>'}
  const ks=Object.keys(G),up=ks.filter(k=>k>=t).sort(),past=ks.filter(k=>k<t).sort();none.sort(byJobNum);noneC.sort(byJobNum);
  const n=a=>`<span class="pill" style="margin-left:6px">${a.length} job${a.length==1?'':'s'}</span>`;
- const grp=(k,tip)=>`<div class="card jday"><h2 style="margin:0 0 8px" data-tip="${tip}">${esc(jobDayLabel(k,t))}${n(G[k])}</h2>${jobTable(G[k])}</div>`;
+ const grp=(k,tip)=>`<div class="card jday"><h2 style="margin:0 0 8px" data-tip="${tip}">${esc(jobDayLabel(k,t))}${n(G[k])}</h2>${jobTable(G[k],k)}</div>`;
  let h='';
   if(past.length||noneC.length){const c=past.reduce((a,k)=>a+G[k].length,0)+noneC.length;
   h+=`<details class="card jearlier"${(jf.q&&jf.q.trim())||!(up.length||none.length)?' open':''}><summary data-tip="Tap to show or hide jobs from past days, oldest first." style="cursor:pointer;font-weight:600">Earlier <span class="pill" style="margin-left:6px">${c} job${c==1?'':'s'}</span></summary>${noneC.length?`<div class="card jday"><h2 style="margin:0 0 8px" data-tip="Finished jobs that never had a date.">No date (closed)${n(noneC)}</h2>${jobTable(noneC)}</div>`:''}${past.map(k=>grp(k,'Jobs that were scheduled for this day.')).join('')}</details>`}
@@ -432,7 +490,7 @@ function jobDays(L){if(!L.length)return '<div class="card"><span style="color:va
 /* ---------- dashboard ---------- */
 {const _vd=V.dash;V.dash=()=>{if(isTech())return techDash();const L=D.invoices.filter(i=>invStatus(i)!='Paid'&&invStatus(i)!='Draft');const out=L.reduce((s,i)=>s+invT(i).bal,0),ov=L.filter(i=>invStatus(i)=='Overdue');
  return `<div class="grid"><div class="card stat" onclick="go('invoices')" style="cursor:pointer"><div class="n">${money(out)}</div><div class="k">Outstanding invoices (${L.length})</div></div><div class="card stat" onclick="inf='Overdue';go('invoices')" style="cursor:pointer"><div class="n" style="color:${ov.length?'#c0392b':'var(--b)'}">${money(ov.reduce((s,i)=>s+invT(i).bal,0))}</div><div class="k">Overdue (${ov.length})</div></div></div>`+_vd()}}
-function techDash(){const me=myWorkerId(),t=tod(),mine=D.jobs.filter(j=>(j.workers||[]).includes(me)||isTech());const today=mine.filter(j=>(j.when||'').slice(0,10)==t),up=mine.filter(j=>(j.when||'').slice(0,10)>t&&j.status!='Paid').sort((a,b)=>a.when.localeCompare(b.when)).slice(0,10);
+function techDash(){const me=myWorkerId(),t=tod(),mine=D.jobs.filter(j=>(j.workers||[]).includes(me)||isTech());const today=mine.filter(j=>mdOn(j,t)),up=mine.filter(j=>mdStart(j)>t&&j.status!='Paid').sort((a,b)=>a.when.localeCompare(b.when)).slice(0,10);
  const e=D.time.find(x=>x.worker==me&&!x.out);
  return `<div class="card"><h2>Hi${W(me)?', '+esc(W(me).name):''} 👋</h2>${e?`<span class="on-clock">On clock since ${fmtDT(e.in)}</span> <button class="btn d" onclick="clockOut('${e.id}')">Clock out</button>`:`<button class="btn g" onclick="go('clock')">Clock in</button>`}</div><div class="card"><h2>My jobs today</h2>${jobTable(today)}</div><div class="card"><h2>Upcoming</h2>${jobTable(up)}</div>`}
 
@@ -443,7 +501,7 @@ const invStatus=i=>{if(i.status=='Paid')return 'Paid';if(i.status!='Draft'&&i.du
 const IV=id=>D.invoices.find(x=>x.id==id);
 V.invoices=()=>{if(view&&IV(view))return invoiceDoc(IV(view));let L=D.invoices.slice().reverse();if(inf)L=L.filter(i=>invStatus(i)==inf);
  return `<div class="card"><div class="row" style="align-items:end"><div><label>Status</label><select onchange="inf=this.value;render()">${opt(['Draft','Sent','Overdue','Paid'].map(s=>[s,s]),inf,'All')}</select></div><div style="flex:2"><button class="btn" onclick="editInvoice()">+ New invoice</button></div></div></div><div class="card"><div class="tw"><table><tr><th>Invoice</th><th>Client</th><th>Date</th><th>Due</th><th>Status</th><th class="right">Total</th><th class="right">Balance</th><th></th></tr>${L.map(i=>{const t=invT(i),s=invStatus(i);return `<tr><td>${esc(i.num)}${tag(i)}</td><td>${cname(i.client)}</td><td>${i.date}</td><td>${i.due||''}</td><td><span class="pill ${s}">${s}</span></td><td class="right">${money(t.total)}</td><td class="right">${money(t.bal)}</td><td><button class="btn sm s" onclick="viewInvoice('${i.id}')">View</button></td></tr>`}).join('')||'<tr><td colspan=8>No invoices yet. Create one from a job or an approved quote.</td></tr>'}</table></div></div>`};
-function viewInvoice(id){tab='invoices';view=id;modal();render();scrollTo(0,0)}
+function viewInvoice(id){tab='invoices';view=id;modalClear();render();scrollTo(0,0)}
 function jobItems(j){const q=Q(j.quote);if(q)return JSON.parse(JSON.stringify(q.items));const h=Math.round(jobHours(j.id)*4)/4;return [{type:'fee',desc:'Service call / trip fee',qty:1,price:D.settings.fee},{type:'labor',desc:'Labor'+(j.desc?' - '+j.desc:''),qty:h||1,price:D.settings.rate}]}
 function invFromJob(jid){const j=J(jid);if(j.invoice&&IV(j.invoice))return viewInvoice(j.invoice);const q=Q(j.quote);modal();editInvoice(null,{client:j.client,job:j.id,quote:j.quote||'',tax:q?q.tax:D.settings.tax,items:jobItems(j),notes:j.desc||''})}
 function invFromQuote(qid){const q=Q(qid),j=D.jobs.find(x=>x.quote==qid);if(j&&j.invoice&&IV(j.invoice))return viewInvoice(j.invoice);editInvoice(null,{client:q.client,job:j?j.id:'',quote:qid,tax:q.tax,items:JSON.parse(JSON.stringify(q.items)),notes:q.notes||''})}
@@ -495,7 +553,7 @@ function clAddTpl(jid){const t=D.checklistTemplates.find(x=>x.id==$('#jclt').val
 function clDel(jid,n){const j=J(jid);j.checklist.splice(n,1);save();drawCl(jid)}
 function techJob(id){const j=J(id);if(!j)return;const c=C(j.client)||{name:j.clientName,phone:j.clientPhone,address:j.clientAddress};
  modal(`<h2>${esc(jName(j))} <span class="pill ${j.status}">${j.status}</span></h2><div class="card" style="margin:0 0 10px"><b style="font-size:17px">${esc(c.name||'—')}</b>${c.phone?`<div style="margin-top:6px">📞 <a href="tel:${telD(c.phone)}">${esc(fmtPhone(c.phone))}</a></div>`:''}${jobAddrHTML(j)}</div>
- <div><b>When:</b> ${fmtDT(j.when)||'—'}</div><div style="margin-top:4px"><b>Crew:</b> ${(j.workers||[]).map(w=>esc(W(w)?.name||'')).join(', ')||'—'}</div><div style="margin-top:8px;white-space:pre-wrap">${esc(j.desc)}</div>
+ <div><b>When:</b> ${esc(mdFmt(j)||fmtDT(j.when)||'—')}${mdPill(j,tod())}</div><div style="margin-top:4px"><b>Crew:</b> ${(j.workers||[]).map(w=>esc(W(w)?.name||'')).join(', ')||'—'}</div><div style="margin-top:8px;white-space:pre-wrap">${esc(j.desc)}</div>
  <label>Field notes</label><textarea id="jtn" rows="3">${esc(j.techNotes||'')}</textarea>${jobExtras(j)}<div style="margin-top:14px"><button class="btn" onclick="J('${id}').techNotes=$('#jtn').value;save();modal();render()">Save notes</button><button class="btn s" onclick="modal()">Close</button></div>`);drawCl(id);loadPhotos(id)}
 
 /* photos: compressed JPEG (max 1280px). Stored in IndexedDB offline, or Firestore chunks when signed in (module overrides photoStore) */
@@ -513,7 +571,7 @@ async function loadPhotos(jid){const el=$('#jph');if(!el)return;el.innerHTML='<s
  el.innerHTML=L.length?Object.keys(byD).sort().map(d=>`<div class="phday">${new Date(d+'T00:00').toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})}</div><div class="phgrid">${byD[d].map(p=>`<div class="ph" id="ph_${p.id}"><div class="phimg"></div><span class="pill ph-${esc(p.tag)}">${esc(p.tag)}</span>${isOwner()||p.by==ME()?`<button class="btn sm d" onclick="delPhoto('${jid}','${p.id}')">✕</button>`:''}<div class="phcap">${p.at?fmtT(p.at):''} · ${esc(p.byName||p.by||'')}</div></div>`).join('')}</div>`).join(''):'<small style="color:var(--m)">No photos yet — tap Take photo.</small>';
  for(const p of L){phCache[p.id]=p;const d=await photoStore.get(p);const box=document.querySelector('#ph_'+p.id+' .phimg');if(box&&d)box.innerHTML=`<img src="${d}" onclick="lightbox(this.src)">`}}catch(e){el.innerHTML='<small class="amsg">Could not load photos: '+esc(e.message)+'</small>'}}
 async function delPhoto(jid,pid){if(!confirm('Delete photo?'))return;await photoStore.del(phCache[pid]);loadPhotos(jid)}
-function lightbox(src){const d=document.createElement('div');d.className='lb';d.innerHTML=`<img src="${src}">`;d.onclick=()=>d.remove();document.body.appendChild(d)}
+function lightbox(src){const d=document.createElement('div');d.className='lb';d.innerHTML=`<img src="${src}">`;d.onclick=()=>{d.remove();cpUnlockScroll();cpSheetPopHist()};cpLockScroll();cpSheetPushHist();document.body.appendChild(d)}
 
 /* ---------- recurring jobs ---------- */
 function occDates(s,to){const out=[],st=new Date(s.start+'T00:00');for(let k=0;k<2000;k++){let d;if(s.unit=='week'){d=new Date(st);d.setDate(d.getDate()+7*s.every*k)}else{const mm=s.unit=='month'?s.every*k:12*s.every*k;const y=st.getFullYear(),m=st.getMonth()+mm,dim=new Date(y,m+1,0).getDate();d=new Date(y,m,Math.min(st.getDate(),dim))}const v=ymd(d);if(v>to||(s.until&&v>s.until))break;if(v>s.lastGen)out.push(v)}return out}
@@ -524,21 +582,21 @@ function stopRec(id){if(!confirm('Stop this series? Future scheduled jobs from i
 
 /* ---------- calendar ---------- */
 let cal={v:'month',d:'',w:''};
-const calJobs=(a,b)=>D.jobs.filter(j=>j.when&&j.when.slice(0,10)>=a&&j.when.slice(0,10)<b&&(!cal.w||(j.workers||[]).includes(cal.w))).sort((x,y)=>x.when.localeCompare(y.when));
-const chip=j=>{const col=wColor((j.workers||[])[0]);return `<div class="chip" ${isOwner()?`draggable="true" ondragstart="event.dataTransfer.setData('text/plain','${j.id}')"`:''} onclick="event.stopPropagation();calTap('${j.id}')" style="border-left-color:${col};background:${col}1a"><span class="wdots">${wChips(j.workers,1)}</span><b>${new Date(j.when).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</b> ${jobClient(j)}${jNo(j)}<br><small>${esc((j.desc||'').slice(0,40))}</small>${jcBar(j)}</div>`};
+const calJobs=(a,b)=>D.jobs.filter(j=>mdOver(j,a,b)&&(!cal.w||(j.workers||[]).includes(cal.w))).sort((x,y)=>x.when.localeCompare(y.when));
+function chip(j,day){const col=wColor((j.workers||[])[0]);return `<div class="chip" ${isOwner()?`draggable="true" ondragstart="event.dataTransfer.setData('text/plain','${j.id}')"`:''} onclick="event.stopPropagation();calTap('${j.id}')" style="border-left-color:${col};background:${col}1a"><span class="wdots">${wChips(j.workers,1)}</span><b>${new Date(j.when).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</b> ${jobClient(j)}${jNo(j)}${mdPill(j,day)}<br><small>${esc((j.desc||'').slice(0,40))}</small>${jcBar(j)}</div>`};
 const dropAttr=(day,h)=>`data-day="${day}" `+(isOwner()?`ondragover="event.preventDefault();this.classList.add('dov')" ondragleave="this.classList.remove('dov')" ondrop="event.preventDefault();this.classList.remove('dov');calMove(event.dataTransfer.getData('text/plain'),'${day}',${h==null?'null':h})"`:'');
 V.cal=()=>{if(!cal.d)cal.d=tod();const d=cal.d;let a,b,body='',title;
  if(cal.v=='day'){a=d;b=addDays(d,1);title=new Date(d+'T00:00').toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});const L=calJobs(a,b);
-  body=`<div class="cday">${[...Array(15)].map((_,i)=>{const h=i+6;return `<div class="hr" ${dropAttr(d,h)} onclick="calCell('${d}',${h})"><div class="hl">${(h%12)||12}${h<12?'a':'p'}</div><div style="flex:1">${L.filter(j=>+j.when.slice(11,13)==h||(h==6&&+j.when.slice(11,13)<6)||(h==20&&+j.when.slice(11,13)>20)).map(chip).join('')}</div></div>`}).join('')}</div>`}
+  body=`<div class="cday">${[...Array(15)].map((_,i)=>{const h=i+6;return `<div class="hr" ${dropAttr(d,h)} onclick="calCell('${d}',${h})"><div class="hl">${(h%12)||12}${h<12?'a':'p'}</div><div style="flex:1">${L.filter(j=>+j.when.slice(11,13)==h||(h==6&&+j.when.slice(11,13)<6)||(h==20&&+j.when.slice(11,13)>20)).map(j=>chip(j,d)).join('')}</div></div>`}).join('')}</div>`}
  else if(cal.v=='week'){a=ymd(weekStart(new Date(d+'T00:00')));b=addDays(a,7);title='Week of '+new Date(a+'T00:00').toLocaleDateString([],{month:'short',day:'numeric'});const L=calJobs(a,b);
-  body=`<div class="cweek">${[...Array(7)].map((_,i)=>{const day=addDays(a,i);return `<div class="cd ${day==tod()?'today':''}" ${dropAttr(day)} onclick="calCell('${day}')"><div class="cdh" onclick="event.stopPropagation();cal.v='day';cal.d='${day}';render()">${new Date(day+'T00:00').toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'})}</div>${L.filter(j=>j.when.slice(0,10)==day).map(chip).join('')}</div>`}).join('')}</div>`}
+  body=`<div class="cweek">${[...Array(7)].map((_,i)=>{const day=addDays(a,i);return `<div class="cd ${day==tod()?'today':''}" ${dropAttr(day)} onclick="calCell('${day}')"><div class="cdh" onclick="event.stopPropagation();cal.v='day';cal.d='${day}';render()">${new Date(day+'T00:00').toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'})}</div>${L.filter(j=>mdOn(j,day)).map(j=>chip(j,day)).join('')}</div>`}).join('')}</div>`}
  else{const f=new Date(d+'T00:00');f.setDate(1);const m=f.getMonth();a=ymd(weekStart(f));b=addDays(a,42);title=f.toLocaleDateString([],{month:'long',year:'numeric'});const L=calJobs(a,b);
-  body=`<div class="cmonth">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(x=>`<div class="cmh">${x}</div>`).join('')}${[...Array(42)].map((_,i)=>{const day=addDays(a,i),jl=L.filter(j=>j.when.slice(0,10)==day);return `<div class="cm ${new Date(day+'T00:00').getMonth()!=m?'other':''} ${day==tod()?'today':''}" ${dropAttr(day)} onclick="calCell('${day}')"><div class="cdh" onclick="event.stopPropagation();cal.v='day';cal.d='${day}';render()">${+day.slice(8)}</div>${jl.slice(0,3).map(j=>`<div class="mdot" ${isOwner()?`draggable="true" ondragstart="event.dataTransfer.setData('text/plain','${j.id}')"`:''} onclick="event.stopPropagation();calTap('${j.id}')" style="background:${wColor((j.workers||[])[0])}">${new Date(j.when).toLocaleTimeString([],{hour:'numeric'})} ${jobClient(j)}</div>`).join('')}${jl.length>3?`<small>+${jl.length-3} more</small>`:''}</div>`}).join('')}</div>`}
+  body=`<div class="cmonth">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(x=>`<div class="cmh">${x}</div>`).join('')}${[...Array(42)].map((_,i)=>{const day=addDays(a,i),jl=L.filter(j=>mdOn(j,day));return `<div class="cm ${new Date(day+'T00:00').getMonth()!=m?'other':''} ${day==tod()?'today':''}" ${dropAttr(day)} onclick="calCell('${day}')"><div class="cdh" onclick="event.stopPropagation();cal.v='day';cal.d='${day}';render()">${+day.slice(8)}</div>${jl.slice(0,3).map(j=>`<div class="mdot" ${isOwner()?`draggable="true" ondragstart="event.dataTransfer.setData('text/plain','${j.id}')"`:''} onclick="event.stopPropagation();calTap('${j.id}')" style="background:${wColor((j.workers||[])[0])}">${new Date(j.when).toLocaleTimeString([],{hour:'numeric'})} ${jobClient(j)}</div>`).join('')}${jl.length>3?`<small>+${jl.length-3} more</small>`:''}</div>`}).join('')}</div>`}
  const step=n=>cal.v=='day'?addDays(d,n):cal.v=='week'?addDays(d,7*n):(()=>{const x=new Date(d+'T00:00');x.setDate(1);x.setMonth(x.getMonth()+n);return ymd(x)})();
  const ws=isOwner()?D.workers:D.workers.filter(w=>D.jobs.some(j=>(j.workers||[]).includes(w.id)));
  return `<div class="card noprint"><div class="row" style="align-items:center"><div style="flex:2;min-width:220px"><button class="btn s" onclick="cal.d='${step(-1)}';render()">◀</button><button class="btn s" onclick="cal.d=tod();render()">Today</button><button class="btn s" onclick="cal.d='${step(1)}';render()">▶</button> <b style="margin-left:6px">${title}</b></div><div>${['day','week','month'].map(v=>`<button class="btn sm ${cal.v==v?'':'s'}" onclick="cal.v='${v}';render()">${v[0].toUpperCase()+v.slice(1)}</button>`).join('')}</div><div><select onchange="cal.w=this.value;render()">${opt(ws.map(w=>[w.id,w.name]),cal.w,'All workers')}</select></div></div>
  <div class="legend">${ws.map(w=>`<span><i style="background:${wColor(w.id)}"></i>${esc(w.name)}</span>`).join('')}</div>${isOwner()?'<small style="color:var(--m)">Drag a job to another day/hour to reschedule, or tap it.</small>':''}</div><div class="card" style="padding:8px">${body}</div>`};
-function calMove(id,day,h){const j=J(id);if(!j||!isOwner())return;const t=h==null?(j.when||'T08:00').slice(11,16)||'08:00':String(h).padStart(2,'0')+':'+((j.when||'').slice(14,16)||'00');j.when=day+'T'+t;save();render()}
+function calMove(id,day,h){const j=J(id);if(!j||!isOwner())return;const t=h==null?(j.when||'T08:00').slice(11,16)||'08:00':String(h).padStart(2,'0')+':'+((j.when||'').slice(14,16)||'00');mdShiftTo(j,day+'T'+t);save();render()}
 function calTap(id){const j=J(id);if(!j)return;if(isTech())return techJob(id);
  modal(`<h2>${esc(jName(j))}</h2><div style="color:var(--m)">${esc(j.desc)}</div><div style="margin-top:4px">Crew: ${(j.workers||[]).map(w=>esc(W(w)?.name||'')).join(', ')||'—'}</div><label>Reschedule to</label><input id="rsw" type="datetime-local" value="${j.when||''}"><div style="margin-top:14px"><button class="btn" onclick="J('${id}').when=$('#rsw').value;save();modal();render()">Move</button><button class="btn s" onclick="modal();editJob('${id}')">Open job</button><button class="btn s" onclick="modal()">Close</button></div>`)}
 
@@ -629,12 +687,12 @@ function quickSched(day,h){const un=D.jobs.filter(j=>!j.when&&!['Paid','Invoiced
 function saveQuick(day){const ws=[...document.querySelectorAll('.qsw:checked')].map(x=>x.value),when=day+'T'+($('#qst').value||'08:00');let j=J($('#qsj').value);
  if(!j){const cl=pickClient();if(!cl)return;j={id:uid(),num:nextJobNum(),client:cl,desc:$('#qsd').value,workers:[],when:'',status:'Scheduled',quote:''};D.jobs.push(j)}j.when=when;if(ws.length)j.workers=ws;save();modal();render()}
 function unschedPanel(){if(!isOwner())return '';const un=D.jobs.filter(j=>!j.when&&!['Paid','Invoiced'].includes(j.status));return `<div class="card noprint"><h2 style="font-size:15px">Unscheduled (${un.length}) <small style="color:var(--m);font-weight:400">drag onto a day, or tap a day to schedule</small></h2><div class="unsch">${un.map(j=>`<div class="chip" draggable="true" ondragstart="event.dataTransfer.setData('text/plain','${j.id}')" onclick="calTap('${j.id}')"><b>${jobClient(j)}</b>${jNo(j)}<br><small>${esc((j.desc||'').slice(0,40))}</small></div>`).join('')||'<small style="color:var(--m)">Nothing waiting.</small>'}</div></div>`}
-function weekText(wid,a){const w=W(wid);const L=D.jobs.filter(j=>(j.workers||[]).includes(wid)&&j.when&&j.when.slice(0,10)>=a&&j.when.slice(0,10)<addDays(a,7)).sort((x,y)=>x.when.localeCompare(y.when));const ord=n=>n+(['th','st','nd','rd'][(n%100-20)%10]||['th','st','nd','rd'][n%100]||'th');
+function weekText(wid,a){const w=W(wid);const L=D.jobs.filter(j=>(j.workers||[]).includes(wid)&&mdOver(j,a,addDays(a,7))).sort((x,y)=>x.when.localeCompare(y.when));const ord=n=>n+(['th','st','nd','rd'][(n%100-20)%10]||['th','st','nd','rd'][n%100]||'th');
  return `${D.settings.company} schedule for ${w?w.name:''} (week of ${new Date(a+'T00:00').toLocaleDateString([],{month:'short',day:'numeric'})}):\n`+(L.map(j=>{const d=new Date(j.when);const c=C(j.client)||{};return `• ${d.toLocaleDateString([],{weekday:'long'})} the ${ord(d.getDate())}, ${fmtT(d)}: ${c.name||j.clientName||''}${(c.address||j.clientAddress)?' — '+(c.address||j.clientAddress):''}${j.desc?' ('+j.desc+')':''}`}).join('\n')||'No jobs scheduled.')}
 async function sendSched(wid,a){const t=weekText(wid,a);try{if(navigator.share){await navigator.share({text:t});return}}catch(e){if(e.name=='AbortError')return}location.href='sms:?&body='+encodeURIComponent(t)}
 function crewView(a){const days=[...Array(7)].map((_,i)=>addDays(a,i));const ws=(cal.w?D.workers.filter(w=>w.id==cal.w):D.workers);
- if(innerWidth<700)return ws.map(w=>`<div class="crewm" style="border-left:5px solid ${wColor(w.id)}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(w.name)}</b><button class="btn sm s" onclick="sendSched('${w.id}','${a}')">📤 Send schedule</button></div>${days.map(d=>{const L=D.jobs.filter(j=>(j.workers||[]).includes(w.id)&&(j.when||'').slice(0,10)==d).sort((x,y)=>x.when.localeCompare(y.when));return `<div class="crewd ${d==tod()?'today':''}" ${dropAttr(d)} onclick="calCellW('${d}','${w.id}')"><div class="cdh">${new Date(d+'T00:00').toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})}</div>${L.map(chip).join('')||'<small style="color:#aaa">— tap to assign</small>'}</div>`}).join('')}</div>`).join('');
- return `<div class="tw"><table class="crew"><tr><th>Worker</th>${days.map(d=>`<th class="${d==tod()?'today':''}">${new Date(d+'T00:00').toLocaleDateString([],{weekday:'short',day:'numeric'})}</th>`).join('')}</tr>${ws.map(w=>`<tr><td style="border-left:5px solid ${wColor(w.id)}"><b>${esc(w.name)}</b><br><button class="btn sm s" onclick="sendSched('${w.id}','${a}')">📤 Send schedule</button></td>${days.map(d=>`<td class="cd" ${dropAttr(d)} onclick="calCellW('${d}','${w.id}')">${D.jobs.filter(j=>(j.workers||[]).includes(w.id)&&(j.when||'').slice(0,10)==d).sort((x,y)=>x.when.localeCompare(y.when)).map(chip).join('')}</td>`).join('')}</tr>`).join('')}</table></div>`}
+ if(innerWidth<700)return ws.map(w=>`<div class="crewm" style="border-left:5px solid ${wColor(w.id)}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(w.name)}</b><button class="btn sm s" onclick="sendSched('${w.id}','${a}')">📤 Send schedule</button></div>${days.map(d=>{const L=D.jobs.filter(j=>(j.workers||[]).includes(w.id)&&mdOn(j,d)).sort((x,y)=>x.when.localeCompare(y.when));return `<div class="crewd ${d==tod()?'today':''}" ${dropAttr(d)} onclick="calCellW('${d}','${w.id}')"><div class="cdh">${new Date(d+'T00:00').toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})}</div>${L.map(j=>chip(j,d)).join('')||'<small style="color:#aaa">— tap to assign</small>'}</div>`}).join('')}</div>`).join('');
+ return `<div class="tw"><table class="crew"><tr><th>Worker</th>${days.map(d=>`<th class="${d==tod()?'today':''}">${new Date(d+'T00:00').toLocaleDateString([],{weekday:'short',day:'numeric'})}</th>`).join('')}</tr>${ws.map(w=>`<tr><td style="border-left:5px solid ${wColor(w.id)}"><b>${esc(w.name)}</b><br><button class="btn sm s" onclick="sendSched('${w.id}','${a}')">📤 Send schedule</button></td>${days.map(d=>`<td class="cd" ${dropAttr(d)} onclick="calCellW('${d}','${w.id}')">${D.jobs.filter(j=>(j.workers||[]).includes(w.id)&&mdOn(j,d)).sort((x,y)=>x.when.localeCompare(y.when)).map(j=>chip(j,d)).join('')}</td>`).join('')}</tr>`).join('')}</table></div>`}
 function calCellW(day,wid){quickSched(day);setTimeout(()=>{const c=document.querySelector(`.qsw[value="${wid}"]`);if(c)c.checked=true},0)}
 function myWeek(a){const me=myWorkerId();return `<div style="white-space:pre-wrap;font-size:15px;line-height:1.6">${esc(weekText(me,a)).replace(/^.*\n/,'')}</div>`}
 {const _vc=V.cal;V.cal=()=>{if(!cal.d)cal.d=tod();if(isTech()&&!cal._t){cal.v='month';cal._t=1}if(cal.v=='crew'||cal.v=='myweek'){const a=ymd(weekStart(new Date(cal.d+'T00:00')));const sv=cal.v;cal.v='week';let h=_vc();cal.v=sv;const body=sv=='crew'?crewView(a):myWeek(a);
@@ -701,7 +759,7 @@ let lastSub={};try{lastSub=JSON.parse(localStorage.getItem('cp-lastsub'))||{}}ca
 function goGroup(g){if(g=='more'){if(groupOf(tab)=='more'&&tab!='more'){go('more');return}go(lastSub.more&&lastSub.more!='more'&&isOwner()?'more':'more');return}const subs=GROUPS[g].subs();const t=subs.some(s=>s[0]==lastSub[g])?lastSub[g]:subs[0][0];if(t==tab&&g==groupOf(tab)){scrollTo(0,0);return}go(t)}
 V.more=()=>`<div class="card morelist">${MORE.map(([k,l,i])=>`<button onclick="go('${k}')"><span class="mi">${i}</span><span style="flex:1;text-align:left">${l}</span><span style="color:var(--m)">›</span></button>`).join('')}</div>`;
 document.body.insertAdjacentHTML('beforeend','<nav id="bnav" class="noprint"></nav>');
-{const _r=render;render=function(){_r();if(isTech()&&!['dash','clock','sheets','leads','cal','jobs','help','notif'].includes(tab)){tab='dash';_r()}
+{const _r=render;render=function(){_r();if(isTech()&&!['dash','clock','sheets','leads','cal','jobs','help','notif','used'].includes(tab)){tab='dash';_r()}
  const g=groupOf(tab);if(tab!='more'){lastSub[g]=tab;localStorage.setItem('cp-lastsub',JSON.stringify(lastSub))}
  if(location.hash.slice(1)!=tab)history.replaceState(null,'','#'+tab);
  const nl=typeof openLeads=='function'?openLeads().length:0;
@@ -718,11 +776,11 @@ render();
 /* ===================== Oct 10b: month-first calendar, profit report counts invoices ===================== */
 cal.v='month';cal._t=1;cal.sel=cal.sel||'';
 function monthBody(){const f=new Date(cal.d+'T00:00');f.setDate(1);const m=f.getMonth(),a=ymd(weekStart(f)),b=addDays(a,42),L=calJobs(a,b);if(!cal.sel||cal.sel<a||cal.sel>=b)cal.sel=(tod()>=a&&tod()<b&&new Date(tod()+'T00:00').getMonth()==m)?tod():ymd(f);
- const cells=[...Array(42)].map((_,i)=>{const day=addDays(a,i),jl=L.filter(j=>j.when.slice(0,10)==day);return `<div class="mc ${new Date(day+'T00:00').getMonth()!=m?'other':''} ${day==tod()?'today':''} ${day==cal.sel?'sel':''}" ${dropAttr(day)} onclick="cal.sel='${day}';render()"><div class="mcn">${+day.slice(8)}</div>${jl.length?`<div class="mcd">${jl.slice(0,4).map(j=>(j.workers||[]).length?j.workers.slice(0,3).map(w=>`<i style="background:${wColor(w)}"></i>`).join(''):'<i style="background:#888"></i>').join('')}</div><div class="mcc">${jl.length} job${jl.length>1?'s':''}</div>`:''}</div>`}).join('');
+ const cells=[...Array(42)].map((_,i)=>{const day=addDays(a,i),jl=L.filter(j=>mdOn(j,day));return `<div class="mc ${new Date(day+'T00:00').getMonth()!=m?'other':''} ${day==tod()?'today':''} ${day==cal.sel?'sel':''}" ${dropAttr(day)} onclick="cal.sel='${day}';render()"><div class="mcn">${+day.slice(8)}</div>${jl.length?`<div class="mcd">${jl.slice(0,4).map(j=>(j.workers||[]).length?j.workers.slice(0,3).map(w=>`<i style="background:${wColor(w)}"></i>`).join(''):'<i style="background:#888"></i>').join('')}</div><div class="mcc">${jl.length} job${jl.length>1?'s':''}</div>`:''}</div>`}).join('');
  const sj=calJobs(cal.sel,addDays(cal.sel,1));
  return `<div class="mgrid">${['M','T','W','T','F','S','S'].map(x=>`<div class="cmh">${x}</div>`).join('')}${cells}</div>
  <div class="mday"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0;font-size:16px">${new Date(cal.sel+'T00:00').toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'})}</h3><div>${isOwner()?`<button class="btn" onclick="quickSched('${cal.sel}')">+ Schedule job</button>`:''}<button class="btn s" onclick="cal.v='day';cal.d='${cal.sel}';render()">Day view</button></div></div>
- <div style="margin-top:8px">${sj.map(chip).join('')||'<p style="color:var(--m);margin:6px 0">No jobs this day.</p>'}</div></div>`}
+ <div style="margin-top:8px">${sj.map(j=>chip(j,cal.sel)).join('')||'<p style="color:var(--m);margin:6px 0">No jobs this day.</p>'}</div></div>`}
 {const _vc=V.cal;V.cal=()=>{let h=_vc();if(cal.v=='month')h=h.replace(/<div class="card" style="padding:8px">[\s\S]*$/,`<div class="card" style="padding:8px">${monthBody()}</div>`);return h}}
 
 /* ---- profit: invoice-based ---- */
@@ -761,7 +819,7 @@ const leadChip=l=>{const od=l.follow&&l.follow<tod();return `<div class="lchip $
 function openLead(id){const l=D.leads.find(x=>x.id==id);if(!l)return;const o=isOwner(),od=l.follow&&l.follow<tod(),j=J(l.job);
  modal(`<h2>Lead · ${esc(l.clientName||cname(l.client))} <span class="pill ${l.status}">${l.status}</span></h2>${l.clientPhone?`<div>📞 <a href="tel:${telD(l.clientPhone)}">${esc(fmtPhone(l.clientPhone))}</a></div>`:''}<div style="font-size:12px;color:var(--m);margin:4px 0">${l.date}${j?' · from '+esc(jName(j)):''}${l.byName?' · by '+esc(l.byName):''}</div><div style="white-space:pre-wrap;margin:8px 0">${esc(l.text)}</div>
  ${o?`<div class="row" style="align-items:end"><div><label>Status</label><select id="lst">${opt(LS.map(s=>[s,s]),l.status)}</select></div><div><label>Follow up ${od?'<b style="color:#c0392b">· overdue</b>':''}</label><input id="lfd" type="date" value="${l.follow||''}"></div></div>
- <div style="margin-top:14px"><button class="btn" onclick="const l=D.leads.find(x=>x.id=='${id}');l.status=$('#lst').value;l.follow=$('#lfd').value;save();modal();render()">Save</button>${l.quote&&Q(l.quote)?`<button class="btn s" onclick="modal();viewQuote('${l.quote}')">Quote ${esc(Q(l.quote).num)}</button>`:`<button class="btn g" onclick="modal();leadQuote('${id}')">Create quote</button>`}<button class="btn s" onclick="modal()">Close</button></div>`
+ <div style="margin-top:14px"><button class="btn" onclick="const l=D.leads.find(x=>x.id=='${id}');l.status=$('#lst').value;l.follow=$('#lfd').value;save();modal();render()">Save</button>${l.quote&&Q(l.quote)?`<button class="btn s" onclick="modalClear();viewQuote('${l.quote}')">Quote ${esc(Q(l.quote).num)}</button>`:`<button class="btn g" onclick="modalClear();leadQuote('${id}')">Create quote</button>`}<button class="btn s" onclick="modal()">Close</button></div>`
  :`<div>Follow up: ${l.follow||'—'}</div><p style="font-size:13px;color:var(--m)">The owners will follow up on this lead.</p><div style="margin-top:14px"><button class="btn s" onclick="modal()">Close</button></div>`}`)}
 function calLeadToggle(){localStorage.setItem('cp-calleads',calLeadsOn()?'off':'on');render()}
 {const _r=render;render=function(){_r();if(tab!='cal')return;const lg=document.querySelector('.legend');const L=calLeads();
@@ -1031,7 +1089,7 @@ const hm=h=>{const m=Math.round(h*60);return m<60?m+'m':Math.floor(m/60)+'h '+St
 function whosWhere(){const t=tod(),d0=new Date(t+'T00:00'),now=new Date();
  const cards=D.workers.map(w=>{const open=dayOpen(w.id),run=jobOpen(w.id);
   const todayH=D.time.filter(e=>isDayT(e)&&e.worker==w.id).reduce((s,e)=>{const a=Math.max(new Date(e.in),d0),b=e.out?new Date(e.out):now;return s+Math.max(0,(b-a)/36e5)},0);
-  let js=D.jobs.filter(j=>(j.workers||[]).includes(w.id)&&((j.when&&j.when.slice(0,10)==t)||j.status=='In Progress'));
+  let js=D.jobs.filter(j=>(j.workers||[]).includes(w.id)&&(mdOn(j,t)||j.status=='In Progress'));
   if(run&&!js.some(j=>j.id==run.job)&&J(run.job))js.unshift(J(run.job));
   js.sort((a,b)=>(run&&b.id==run.job)-(run&&a.id==run.job)||(a.when||'').localeCompare(b.when||''));
   const jobH=id=>mergeT(D.time.filter(e=>isJobT(e)&&e.worker==w.id&&e.job==id)).reduce((s,e)=>s+hrs(e),0);
@@ -1077,7 +1135,7 @@ function dayClockCard(){const own=isOwner(),me=myWorkerId();const ws=own?D.worke
 {const _r2=render;render=function(){_tjOn++;_tj=null;try{return _r2()}finally{if(!--_tjOn)_tj=null}}}
 {const _vc=V.cal;V.cal=()=>dayClockCard()+_vc()}
 V.clock=()=>dayClockCard()+`<div class="card"><h2>Recent entries</h2>${timeTable(D.time.filter(t=>isOwner()||t.worker==myWorkerId()).sort((a,b)=>b.in.localeCompare(a.in)).slice(0,20))}<button class="btn s" onclick="editTime()">+ Manual entry</button></div>`;
-techDash=function(){const me=myWorkerId(),t=tod(),mine=D.jobs.filter(j=>(j.workers||[]).includes(me)||isTech());const today=mine.filter(j=>(j.when||'').slice(0,10)==t),up=mine.filter(j=>(j.when||'').slice(0,10)>t&&j.status!='Paid').sort((a,b)=>a.when.localeCompare(b.when)).slice(0,10);
+techDash=function(){const me=myWorkerId(),t=tod(),mine=D.jobs.filter(j=>(j.workers||[]).includes(me)||isTech());const today=mine.filter(j=>mdOn(j,t)),up=mine.filter(j=>mdStart(j)>t&&j.status!='Paid').sort((a,b)=>a.when.localeCompare(b.when)).slice(0,10);
  return `<div class="card"><h2 style="margin:0">Hi${W(me)?', '+esc(noSample(W(me).name)):''} 👋</h2></div>${dayClockCard()}<div class="card"><h2>My jobs today</h2>${jobTable(today)}</div><div class="card"><h2>Upcoming</h2>${jobTable(up)}</div>`};
 {const _vd=V.dash;V.dash=()=>{const h=_vd();return isOwner()?dayClockCard()+h:h}}
 /* time entry editor: Day / Job type */
@@ -1386,7 +1444,7 @@ const ordOpenN=()=>(D.orders||[]).filter(o=>o.status=='open'&&J(o.jobId)).length
 const ordSt={open:['Need to order','#c0392b'],ordered:['Ordered','#b9770e'],received:['Received','#1e8e4e']};
 function ordCanEdit(o){return isOwner()||(o.by===ME()&&o.status=='open')}
 function ordRow(o,showJob){const st=ordSt[o.status]||ordSt.open,ed=window._ordEdit==o.id;
- if(ed)return `<div class="ordi"><div class="row" style="align-items:center"><input id="oe_t" style="flex:3" value="${esc(o.text)}"><input id="oe_q" style="flex:0 0 70px;min-width:0" type="number" min="0" step="1" placeholder="Qty" value="${esc(o.qty??'')}"></div><input id="oe_n" placeholder="Note (optional)" value="${esc(o.note||'')}" style="margin-top:4px"><div style="margin-top:4px;display:flex;gap:6px"><button class="btn sm" onclick="ordSaveEdit('${o.id}')">Save</button><button class="btn sm s" onclick="window._ordEdit='';ordRedraw()">Cancel</button></div></div>`;
+ if(ed)return `<div class="ordi puedit"><div class="row" style="align-items:center"><input id="oe_t" style="flex:3" value="${esc(o.text)}"><input id="oe_q" style="flex:0 0 70px;min-width:0" type="number" min="0" step="1" placeholder="Qty" value="${esc(o.qty??'')}"></div><input id="oe_n" placeholder="Note (optional)" value="${esc(o.note||'')}" style="margin-top:4px"><div style="margin-top:4px;display:flex;gap:6px"><button class="btn sm" onclick="ordSaveEdit('${o.id}')">Save</button><button class="btn sm s" onclick="window._ordEdit='';ordRedraw()">Cancel</button></div></div>`;
  const acts=[];if(isOwner()){if(o.status=='open')acts.push(`<button class="btn sm" onclick="ordSet('${o.id}','ordered')">Mark ordered</button>`);if(o.status=='ordered')acts.push(`<button class="btn sm g" onclick="ordSet('${o.id}','received')">Received</button>`);if(o.status!='open')acts.push(`<button class="btn sm s" onclick="ordSet('${o.id}','open')" title="Put back on the list">Undo</button>`)}
  if(ordCanEdit(o)&&o.status=='open')acts.push(`<button class="btn sm s" onclick="window._ordEdit='${o.id}';ordRedraw()">Edit</button>`);
  if(ordCanEdit(o))acts.push(`<button class="btn sm d" onclick="ordDel('${o.id}')">Delete</button>`);
@@ -1493,7 +1551,7 @@ function reopenJob(id){const j=J(id);if(!j||!isOwner()||j.status!='Completed')re
 function finBar(j){if(!j||isBilling())return '';
  if(jCanFinish(j))return `<div class="finbar"><button class="btn finbtn" onclick="finishJob('${j.id}')">✅ Finish job</button><small>Tap when the work is done.</small></div>`;
  if(j.status=='Completed'){const by=j.finishedByName?` by ${esc(j.finishedByName)}`:'',at=j.finishedAt?` · ${esc(fmtDT(j.finishedAt))}`:'';
-  return `<div class="finbar done"><b>✅ Finished${by}</b><small>${at}</small>${isOwner()?`${jReady(j)?' <span class="pill rdy">Ready to invoice</span>':''}<div style="margin-top:6px">${jReady(j)&&typeof invFromJob=='function'?`<button class="btn sm" onclick="modal();invFromJob('${j.id}')">Create invoice</button> `:''}<button class="btn sm s" onclick="reopenJob('${j.id}')">Reopen job</button></div>`:''}</div>`}
+  return `<div class="finbar done"><b>✅ Finished${by}</b><small>${at}</small>${isOwner()?`${jReady(j)?' <span class="pill rdy">Ready to invoice</span>':''}<div style="margin-top:6px">${jReady(j)&&typeof invFromJob=='function'?`<button class="btn sm" onclick="modalClear();invFromJob('${j.id}')">Create invoice</button> `:''}<button class="btn sm s" onclick="reopenJob('${j.id}')">Reopen job</button></div>`:''}</div>`}
  return ''}
 {const _ej=editJob;editJob=function(id,fq){const r=_ej(id,fq);if(id)finInsert(id);return r}}
 {const _tj=techJob;techJob=function(id){const r=_tj(id);finInsert(id);return r}}
@@ -1525,7 +1583,7 @@ function fcOpen(){const j=J(FC.id);
  <datalist id="fcparts">${fcNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
  <div class="fcfoot"><small id="fc_need" class="fchint"></small><button type="button" class="btn s fccan" onclick="fcCancel()">Cancel</button><button type="button" class="btn finbtn" id="fc_go" disabled onclick="fcSubmit()">✅ Submit &amp; finish job</button></div></div>`);
  fcLists();fcPhLoad();fcGate()}
-function fcCancel(){const id=FC&&FC.id;FC=null;modal();if(id)(isOwner()?editJob:techJob)(id)}
+function fcCancel(){FC=null;modal()}
 function fcAdd(k){const t=$('#fc_'+k+'t'),q=$('#fc_'+k+'q');const v=(t.value||'').trim().slice(0,200);if(!v){t.focus();return}
  FC[k].push({text:v,qty:Math.max(1,Math.round(+q.value||1))});t.value='';q.value=1;FC[k=='rs'?'noR':'noO']=false;$('#fc_'+k+'n').checked=false;fcLists();fcGate();t.focus()}
 function fcDel(k,i){FC[k].splice(i,1);fcLists();fcGate()}
@@ -1550,7 +1608,7 @@ function fcSubmit(){if(!FC||fcMissing().length)return;const j=J(FC.id);if(!jCanF
  j.finishSummary={restock:rs.length,order:FC.ro.length,photos:FC.photos||0,photoSkip:FC.photos?'':FC.reason.trim().slice(0,120)};
  j.status='Completed';j.finishedBy=me;j.finishedByName=nm;j.finishedAt=now;
  const c=[rs.length&&rs.length+' to restock',FC.ro.length&&FC.ro.length+' to order'].filter(Boolean).join(', ');FC=null;
- save();modal();render();cpNote('✅ '+jName(j)+' finished'+(open?' · timer stopped':'')+(c?' · '+c:'')+'.')}
+ save();modalClear();render();cpNote('✅ '+jName(j)+' finished'+(open?' · timer stopped':'')+(c?' · '+c:'')+'.')}
 /* Finish bar goes at the very bottom of the job sheet */
 function finInsert(id){const j=J(id),m=document.querySelector('#modal .modal > div');if(!j||!m||document.querySelector('#modal .finbar'))return;m.insertAdjacentHTML('beforeend',finBar(j))}
 /* ===== Owners: Restock list (Jobs › Restock), check off as the truck is restocked ===== */
@@ -1563,6 +1621,82 @@ V.restock=()=>{if(!isOwner())return '';const L=(D.jobs||[]).filter(j=>(j.restock
  return jSearchBox(L.length)+`<div class="card"><h2 style="margin:0">🔧 Restock the truck</h2><small style="color:var(--m)">Parts the crew used from truck stock, from the Finish job checklist. Tick each one when it's replaced.</small></div>`
   +(op.length?op.map(G).join(''):'<div class="card" style="color:var(--m)">Nothing to restock right now.</div>')+(dn.length?`<details class="card"><summary>Restocked (${dn.length} job${dn.length>1?'s':''})</summary>${dn.map(G).join('')}</details>`:'')};
 {const _js=GROUPS.jobs.subs;GROUPS.jobs.subs=()=>{const a=_js();if(!isOwner())return a;const n=rsOpenN();return a.concat([['restock','Restock'+(n?' ('+n+')':'')]])}}
+
+/* ---------- Parts used (Jobs → Parts used, every staff login; billing never loads it) ----------
+   partsUsed/{id}: jobId, text (part name), qty, note, cat (picked from catalog), by, byName, at, editedAt, techEmails, inActual.
+   NO prices or costs on these lines, ever. Names come from the existing catalog (owners: parts; techs: partNames mirror).
+   Owners tie lines into what already exists: the job's "Actual part costs paid" (profit) and invoice-from-job drafts. */
+const PU={q:'',job:'',d:{j:'',t:'',q:'1',n:''}};
+const puDay=864e5;
+function puCanEdit(u){return isOwner()||(u.by===ME()&&Date.now()-new Date(u.at)<puDay)}
+const puJobs=()=>jSorted(D.jobs.filter(j=>isOwner()||(j.techEmails||[]).includes(ME())));
+{const _d=derive;derive=function(){_d();if(isOwner())(D.used||[]).forEach(u=>{const j=J(u.jobId);if(j)u.techEmails=(j.techEmails||[]).slice()})}}
+{const _js=GROUPS.jobs.subs;GROUPS.jobs.subs=()=>{const a=_js();return isOwner()||isTech()?a.concat([['used','Parts used']]):a}}
+function puRow(u){const ed=window._puEdit==u.id,c=puCanEdit(u);
+ if(ed)return `<div class="ordi puedit"><div class="row" style="align-items:center"><input id="pue_t" list="pu_names" style="flex:3" value="${esc(u.text)}"><input id="pue_q" style="flex:0 0 70px;min-width:0" type="number" min="0.01" step="any" value="${esc(u.qty)}"></div><input id="pue_n" placeholder="Note (optional)" value="${esc(u.note||'')}" style="margin-top:4px"><div style="margin-top:4px;display:flex;gap:6px"><button class="btn sm" onclick="puSaveEdit('${u.id}')">Save</button><button class="btn sm s" onclick="window._puEdit='';render()">Cancel</button></div></div>`;
+ return `<div class="ordi puline"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="flex:1;min-width:140px"><span class="ordq">${esc(u.qty)}×</span> ${esc(u.text)}</b>${isOwner()&&u.inActual?'<small style="color:#1e8e4e">✓ in job costs</small>':''}</div>${u.note?`<div style="font-size:13px;white-space:pre-wrap">${esc(u.note)}</div>`:''}
+ <div style="font-size:12px;color:var(--m)">Logged by ${esc(u.byName||u.by)} · ${fmtDT(u.at)}${u.editedAt?' · edited '+fmtDT(u.editedAt):''}</div>${c?`<div class="ordact"><button class="btn sm s" onclick="window._puEdit='${u.id}';render()">Edit</button><button class="btn sm d" onclick="puDel('${u.id}')">Delete</button></div>`:''}</div>`}
+V.used=()=>{if(!isOwner()&&!isTech())return '<div class="card">Not available for this login.</div>';
+ const JL=puJobs(),names=fcNames(),q=PU.q.trim().toLowerCase();
+ let L=(D.used||[]).filter(u=>J(u.jobId));if(PU.job)L=L.filter(u=>u.jobId==PU.job);
+ if(q)L=L.filter(u=>{const j=J(u.jobId);const hay=[u.text,u.note,u.byName].join(' ').toLowerCase();return q.split(/\s+/).every(w=>hay.includes(w))||jobMatch(j,q)});
+ const G={};L.forEach(u=>(G[u.jobId]=G[u.jobId]||[]).push(u));
+ const gj=Object.keys(G).map(J).sort((a,b)=>jName(a).localeCompare(jName(b))||byJobNum(a,b));
+ const sel=PU.d.j||PU.job||(JL.length==1?JL[0].id:'');const dv=k=>esc(PU.d[k]||'');
+ return `<datalist id="pu_names">${names.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
+ <div class="card"><h2>🔩 Log parts used</h2><div class="row" style="align-items:end"><div style="flex:2"><label>Job</label><select id="pu_j" onchange="PU.d.j=this.value">${opt(JL.map(j=>[j.id,jName(j)]),sel,'Pick a job…')}</select></div></div>
+ <div class="row" style="align-items:end;margin-top:6px"><div style="flex:3"><label>Part (pick from the catalog or type it)</label><input id="pu_t" list="pu_names" autocomplete="off" value="${dv('t')}" oninput="PU.d.t=this.value" placeholder="e.g. 3/4&quot; copper 90"></div><div style="flex:0 0 80px"><label>Qty</label><input id="pu_q" type="number" min="0.01" step="any" value="${dv('q')}" oninput="PU.d.q=this.value"></div></div>
+ <div class="row" style="align-items:end;margin-top:6px"><div style="flex:3"><label>Note (optional)</label><input id="pu_n" value="${dv('n')}" oninput="PU.d.n=this.value" onkeydown="if(event.key=='Enter')puAdd()"></div><div style="flex:0"><button class="btn" id="pu_add" onclick="puAdd()">Add</button></div></div></div>
+ <div class="card"><div class="row" style="align-items:end"><div style="flex:2"><input id="pu_s" type="search" placeholder="🔍 Search parts used: part, job, customer, who…" value="${esc(PU.q)}" oninput="PU.q=this.value;clearTimeout(PU.t);PU.t=setTimeout(()=>{render();const e=$('#pu_s');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}},200)"></div><div><select id="pu_f" onchange="PU.job=this.value;render()">${opt(JL.map(j=>[j.id,jName(j)]),PU.job,'All jobs')}</select></div></div></div>
+ ${gj.map(j=>`<div class="card pujob"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h3 style="margin:0;flex:1">${esc(jName(j))}</h3>${isOwner()?`<button class="btn sm s" onclick="puToActual('${j.id}')">Copy to job costs</button><button class="btn sm s" onclick="invFromJob('${j.id}')">Invoice</button>`:''}</div>${G[j.id].sort((a,b)=>String(b.at).localeCompare(String(a.at))).map(puRow).join('')}</div>`).join('')||'<div class="card"><small style="color:var(--m)">No parts logged'+(q||PU.job?' that match':' yet')+'.</small></div>'}`};
+function puAdd(){const jid=$('#pu_j').value,t=$('#pu_t').value.trim().replace(/\s+/g,' '),qty=+$('#pu_q').value,n=$('#pu_n').value.trim();const j=J(jid);
+ if(!j)return cpNote('Pick a job first.');if(!t)return cpNote('Type or pick a part.');if(!(qty>0))return cpNote('Qty must be more than 0.');
+ const te=(j.techEmails||[]).slice();if(!isOwner()&&!te.includes(ME()))te.push(ME());
+ const u={id:uid(),jobId:jid,text:t.slice(0,200),qty,by:ME(),byName:ordWho(),at:new Date().toISOString(),techEmails:te,cat:fcNames().includes(t)};if(n)u.note=n.slice(0,300);
+ D.used=D.used||[];D.used.push(u);PU.job=PU.job&&PU.job!=jid?'':PU.job;PU.d={j:jid,t:'',q:'1',n:''};save();render();cpNote('Logged '+qty+'× '+t)}
+function puSaveEdit(id){const u=(D.used||[]).find(x=>x.id==id);if(!u||!puCanEdit(u))return;const t=$('#pue_t').value.trim().replace(/\s+/g,' '),qty=+$('#pue_q').value,n=$('#pue_n').value.trim();
+ if(!t)return cpNote('Part name can’t be blank.');if(!(qty>0))return cpNote('Qty must be more than 0.');
+ u.text=t.slice(0,200);u.qty=qty;u.cat=fcNames().includes(t);if(n)u.note=n.slice(0,300);else delete u.note;u.editedAt=new Date().toISOString();window._puEdit='';save();render()}
+function puDel(id){const u=(D.used||[]).find(x=>x.id==id);if(!u||!puCanEdit(u))return;if(!confirm('Delete '+u.qty+'× '+u.text+'?'))return;D.used=D.used.filter(x=>x.id!=id);save();render()}
+const puCat=t=>{t=String(t||'').trim().toLowerCase();return (D.parts||[]).find(p=>String(p.name||'').trim().toLowerCase()==t)};
+/* live updates must not wipe a part someone is typing: hold the redraw while a Parts used field has focus or a line is open for edit */
+{const _rr=window.rerender;window.rerender=()=>{const a=document.activeElement;if(tab=='used'&&!$('#modal').innerHTML&&(window._puEdit||(a&&/^pue?_/.test(a.id||'')&&a.id!='pu_s'))){clearTimeout(PU.rt);PU.rt=setTimeout(()=>window.rerender(),1200);return}_rr()}}
+/* owner: copy new lines into the job's existing "Actual part costs paid" (jobs_private.actual), cost from the catalog */
+function puToActual(jid){if(!isOwner())return;const j=J(jid);if(!j)return;const L=(D.used||[]).filter(u=>u.jobId==jid&&!u.inActual);if(!L.length)return cpNote('Every line on this job is already in the job costs.');
+ j.actual=j.actual||[];L.forEach(u=>{const p=puCat(u.text);j.actual.push({partId:p?p.id:'',desc:u.text,qty:u.qty,cost:p?(+p.lastCost>0?+p.lastCost:+p.cost||0):0,date:String(u.at).slice(0,10)});u.inActual=true});
+ save();render();cpNote('Added '+L.length+' line'+(L.length>1?'s':'')+' to the job costs. Check any $0 costs in the job.')}
+/* owner: a new invoice from the job also lists parts used that aren't already on the quote, at catalog sell price */
+{const _ji=jobItems;jobItems=function(j){const a=_ji(j);if(!isOwner()||!j)return a;const have=new Set(a.map(i=>String(i.desc||'').trim().toLowerCase()));const M={};
+ (D.used||[]).filter(u=>u.jobId==j.id).forEach(u=>{const k=u.text.trim().toLowerCase();if(have.has(k))return;M[k]=M[k]||{u,qty:0};M[k].qty+=+u.qty||0});
+ Object.values(M).forEach(({u,qty})=>{const p=puCat(u.text);a.push({type:'part',partId:p?p.id:'',desc:u.text,qty,price:p?Math.round(sell(p)*100)/100:0,cost:p?(+p.lastCost>0?+p.lastCost:+p.cost||0):0})});return a}}
+
+{const _ej=editJob;editJob=function(id,fq){const r=_ej(id,fq);mdForm(id);return r}}
+
+function mdToggleS(){const on=$('#sjmd')?.checked,f=$('#smdfields');if(f)f.style.display=on?'':'none';
+  if(on){const s=($('#sjw')?.value||'').slice(0,10);if(s&&$('#sjwe')&&!$('#sjwe').value)$('#sjwe').value=mdAdd(s,1)}}
+{const _js=jobSched;jobSched=function(id){_js(id);if(!$('#sjw')||$('#sjmd'))return;const j=J(id)||{};const multi=mdMulti(j);
+  const end=mdDay(j.whenEnd),endT=j.whenEnd&&String(j.whenEnd).length>10?String(j.whenEnd).slice(11,16):'';
+  $('#sjw').insertAdjacentHTML('afterend',`<div id="smdwrap" style="margin-top:8px"><label style="display:inline-flex;gap:8px;align-items:center;color:var(--t);font-size:14px;font-weight:600"><input type="checkbox" id="sjmd" style="width:auto" ${multi?'checked':''} onchange="mdToggleS()"> Multi-day</label>
+   <small style="color:var(--m);display:block;margin:2px 0 6px">This job will show on every day from the start date through the end date.</small>
+   <div id="smdfields" style="display:${multi?'':'none'}"><div class="row" style="align-items:end"><div><label>End date</label><input id="sjwe" type="date" value="${esc(end)}"></div><div><label>End time (optional)</label><input id="sjwt" type="time" value="${esc(endT)}"></div></div></div></div>`)}}
+{const _jss=jobSchedSave;jobSchedSave=function(id){const j=J(id);if(!j)return;const start=$('#sjw')?.value;if(!start){alert('Pick a day and time, or tap Cancel.');return}
+  const on=$('#sjmd')?.checked,ed=$('#sjwe')?.value||'',et=$('#sjwt')?.value||'';
+  if(on){if(!ed){cpNote('Pick an end date for this multi-day job.');return}if(ed<=start.slice(0,10)){cpNote('The end date needs to be after the start date.');return}
+    if(mdDays({when:start,whenEnd:ed}).length>=MD_MAX){cpNote('A job can run at most 60 days.');return}j.whenEnd=et?ed+'T'+et:ed}
+  else delete j.whenEnd;
+  _jss(id)}}
+{const _ju=jobUnsched;jobUnsched=function(id){const j=J(id);if(!j)return;const had=j.when;_ju(id);if(had&&!j.when){delete j.whenEnd;save()}}}
+{const _ct=calTap;calTap=function(id){_ct(id);const btn=[...document.querySelectorAll('#modal button')].find(b=>b.textContent=='Move');
+  if(btn)btn.setAttribute('onclick',`mdShiftTo(J('${id}'),$('#rsw').value);save();modal();render()`);
+  const lab=[...document.querySelectorAll('#modal label')].find(l=>/Reschedule/.test(l.textContent));
+  const j=J(id);if(lab&&mdMulti(j))lab.insertAdjacentHTML('beforebegin',`<div style="margin:6px 0;font-size:13px;color:var(--m)">${esc(mdFmt(j))}${mdPill(j,mdStart(j))} · moving the start keeps the same number of days.</div>`)}}
+
+/* Phone sheets: iOS back swipe / hash must close the top sheet, not move the page behind it. */
+window.addEventListener('popstate',()=>{if(_sheetIgnorePop){_sheetIgnorePop=false;return}if(document.querySelector('.lb')){document.querySelector('.lb').remove();cpUnlockScroll();if(_sheetPushed)_sheetPushed--;return}if(document.querySelector('#modal > .modal'))_popSheet(true)});
+window.addEventListener('hashchange',e=>{if(document.querySelector('#modal > .modal, .lb'))e.stopImmediatePropagation()},true);
+{const _go=go;go=function(t){if(document.querySelector('#modal > .modal')&&!go._ok)return;return _go(t)}}
+
+
 
 /* ---------- timelock: one open day clock per worker + per-worker "Can add/edit own time" ----------
    workers/{id}.timeEdit (default on). Off = that tech only clocks in/out with the buttons; the Firestore rules enforce it too. */
@@ -1607,9 +1741,9 @@ const firebaseConfig = {
 /* ================================================================ */
 const COMPANY='main';
 // D key -> Firestore collection. priv = fields moved to an owner-only "<collection>_private" doc
-const SPEC={clients:{c:'clients'},workers:{c:'workers',priv:['rate','cost']},jobs:{c:'jobs',priv:['actual']},quotes:{c:'quotes'},time:{c:'timeEntries'},parts:{c:'parts'},templates:{c:'templates'},invoices:{c:'invoices'},recurring:{c:'recurring'},checklistTemplates:{c:'checklistTemplates'},users:{c:'users'},notes:{c:'notes'},leads:{c:'leads'},messages:{c:'messages'},priceImports:{c:'priceImports'},orders:{c:'orderItems'}};
+const SPEC={clients:{c:'clients'},workers:{c:'workers',priv:['rate','cost']},jobs:{c:'jobs',priv:['actual']},quotes:{c:'quotes'},time:{c:'timeEntries'},parts:{c:'parts'},templates:{c:'templates'},invoices:{c:'invoices'},recurring:{c:'recurring'},checklistTemplates:{c:'checklistTemplates'},users:{c:'users'},notes:{c:'notes'},leads:{c:'leads'},messages:{c:'messages'},priceImports:{c:'priceImports'},orders:{c:'orderItems'},used:{c:'partsUsed'}};
 // what techs may write: collection -> owner field that must equal their email, and whether they may delete
-const TECHW={time:{f:'email',del:false},notes:{f:'by',del:false},leads:{f:'by',del:false},orders:{f:'by',del:true}};
+const TECHW={time:{f:'email',del:false},notes:{f:'by',del:false},leads:{f:'by',del:false},orders:{f:'by',del:true},used:{f:'by',del:true}};
 const SCHEMA=2;
 const $=s=>document.querySelector(s), body=$('#authbody'), st=$('#syncst');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1706,6 +1840,7 @@ async function start(){
       listenCol('notes',F.query(F.collection(co,'notes'),F.where('techEmails','array-contains',me)));
       listenCol('leads',F.query(F.collection(co,'leads'),F.where('by','==',me)));
       listenCol('orders',F.query(F.collection(co,'orderItems'),F.where('techEmails','array-contains',me)));
+      listenCol('used',F.query(F.collection(co,'partsUsed'),F.where('techEmails','array-contains',me)));
       unsubs.push(F.onSnapshot(F.doc(co,'partNames','list'),s=>{window.cpPartNames=(s.exists()&&s.data().names)||[]},()=>{}));
       unsubs.push(F.onSnapshot(pubRef,s=>{if(!s.exists())return;const D=getD();Object.assign(D.settings,s.data());apply(D,s)},err));
     }
