@@ -24,7 +24,7 @@ body.cp-sheet-open{overflow:hidden;width:100%;overscroll-behavior:none}
 html.cp-sheet-open{overflow:hidden;overscroll-behavior:none}.modal>div{background:#fff;border-radius:10px;padding:18px;width:100%;max-width:760px}
 .clk{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--l);flex-wrap:wrap}.on-clock{color:#1e8e4e;font-weight:600}
 .qv{max-width:800px;margin:auto;background:#fff;padding:32px;border:1px solid var(--l)}.qv .tot td{font-weight:700}.right{text-align:right}
-@media print{header,nav,.noprint{display:none!important}main{padding:0}.qv{border:0}body{background:#fff}}
+@media print{header,nav,.noprint{display:none!important}main{padding:0}.qv{border:0}body{background:#fff}body.cp-docprint #app>:not(.pdoc){display:none!important}}
 .hlogo{height:30px;vertical-align:middle;margin-right:10px}.cpm{display:inline-block;background:var(--b);color:#fff;font-weight:900;font-style:italic;letter-spacing:-1px;padding:2px 7px;border-radius:5px;margin-right:8px;border:2px solid #fff;box-shadow:2px 2px 0 #000}.auth{position:fixed;inset:0;background:linear-gradient(160deg,#111 60%,#D7262E);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}.auth>div{background:#fff;border-radius:12px;padding:24px;width:100%;max-width:380px}.auth a{color:var(--b);font-size:13px;cursor:pointer}.amsg{font-size:13px;margin-top:10px;color:#c0392b}.amsg.ok{color:#1e8e4e}#syncst{font-size:12px;opacity:.85}
 .Overdue{background:#f9d6d2;color:#8a1c12}.Invoiced{background:#dde8ff}
 .cweek{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:4px;overflow-x:auto}.cd{min-height:140px;background:#fafafa;border:1px solid var(--l);border-radius:6px;padding:4px;cursor:pointer}.cd.today,.cm.today{border-color:var(--b);box-shadow:inset 0 0 0 1px var(--b)}.cdh{font-size:12px;font-weight:700;color:var(--m);margin-bottom:4px}.wchip{display:inline-flex;align-items:center;gap:5px;background:var(--wc);color:#fff;border-radius:999px;padding:2px 9px 2px 2px;margin:1px 4px 1px 0;font-size:13px;font-weight:600;white-space:nowrap;line-height:1.5}.wchip b{background:rgba(255,255,255,.25);border-radius:999px;min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;padding:0 3px}.wchip.sm{padding:1px;margin:0 2px 0 0}.wchip.sm b{min-width:18px;height:18px;font-size:10px;background:none}.wdots{float:right;margin-left:4px}
@@ -922,7 +922,7 @@ const TIPS={
 'Cancel':'Close without saving changes.','Close':'Close this window.','Save':'Save your changes. They sync to everyone right away.','Save notes':'Save what you typed in the notes.','Save payment':'Record this payment on the invoice.','Delete':'Remove this for good. You will be asked to confirm.','Edit':'Change the details.','Open':'Open it to see all the details.','Open job':'Open this job.','View':'Open it to see all the details.','View quote':'Open the quote this came from.','Move':'Move this to a different day.','Stop':'Stop recording.','Retry':'Try connecting again.','← Back':'Go back to the list.','‹ More':'Go back to the More menu.',
 'Clock in':'Start your work timer now. Tap Clock out when you finish.','Clock out':'Stop your work timer and save your hours.','Time clock':'Go to the clock in / clock out screen.',
 'Convert to job':'Turn this approved quote into a job you can schedule.','Create invoice':'Make a bill from this job or quote, with the same line items.','Create quote':'Start a quote for this customer, filled in from the lead.','Mark sent':'Mark that you gave or sent this to the customer.','Record payment':'Write down money the customer paid: cash, check or card. Partial payments are fine.',
-'Print':'Print it, or choose "Save as PDF" to email it.','Print / Save PDF':'Print it, or choose "Save as PDF" to email it.','📤 Send schedule':'Text this worker their week using your phone\'s share menu.','Send schedule':'Text this worker their week using your phone\'s share menu.',
+'Print':'Print the page, or save it as a PDF.','Print / Save PDF':'Print it or save a PDF. Use Email / Share only when you want to send it.','📤 Send schedule':'Text this worker their week using your phone\'s share menu.','Send schedule':'Text this worker their week using your phone\'s share menu.',
 'Export CSV':'Download a spreadsheet file you can open in Excel.','Export JSON backup':'Download a full backup file of all your data. Keep it somewhere safe.','Clear sample data':'Remove the example records that start with "Sample -".','Re-add sample data':'Put the example records back so you can practice.','Erase everything':'Delete ALL data. Only use this if you are starting over. Make a backup first.',
 'Sign in':'Log in with your email and password.','Sign out':'Log out of the app on this device.','Use offline on this device':'Use the app without logging in. Data stays only on this phone or computer.','Help':'Open the step-by-step how-to guide.',
 '📷 Take photo':'Opens the camera to take a job photo.','Take photo':'Opens the camera to take a job photo.','🖼 Add from gallery (several at once)':'Pick photos you already took. You can choose several.','Before':'Tag the photo as taken before the work.','During':'Tag the photo as taken during the work.','After':'Tag the photo as taken after the work is done.',
@@ -976,8 +976,8 @@ const G_OWNER=[...G_COMMON,
 ['Jobs',['Tap Jobs (bottom bar). Tap + New job.','Pick the customer, describe the work, set the date and time, and pick the workers.','Set Repeat for jobs that come back, like a yearly water heater flush. Upcoming copies are made 60 days ahead.','Change the status as work goes: Scheduled, In Progress, Done, Paid.','Inside a job you can add notes, photos and a checklist, and enter the actual cost you paid for parts.','Tap Create invoice when the work is done.']],
 ['Photos and checklists',['Open a job and tap 📷 Take photo, or 🖼 Add from gallery. Tag Before, During or After.','Under Checklist, pick a saved checklist with Add, or add your own steps.','Make reusable checklists in More, then Price book & checklists.']],
 ['Quotes',['Tap Sales, then Quotes, then + New quote.','Pick the customer. Use "Start from template" to fill in parts and labor from a saved package. You can add more than one.','Use + Labor, + Part/material and + Service fee to add lines. Change qty and price as needed.','Your cost, profit and margin show at the bottom. Only owners see this, and it never prints.','Save it, then Print / Save PDF to give it to the customer.','When they say yes, set it to Approved and tap Convert to job.']],
-['Invoices and payments',['Tap Sales, then Invoices, then + New invoice. Or tap Create invoice on a job or approved quote.','Invoice numbers (INV-1001...) are made for you. Due date defaults to 15 days.','Tap Mark sent when you give it to the customer. Past the due date it turns Overdue on its own.','Tap Record payment for cash, check or card. Partial payments are fine; the balance updates.','When fully paid it shows Paid and the job is marked Paid.','Tap Print / Save PDF to print or email it.']],
-['Printing quotes and invoices',['Open the quote or invoice and tap Print / Save PDF.','In the print window, open More settings and turn off "Headers and footers" for a clean page.','Choose "Save as PDF" to email it instead of printing.','Address, license #, terms and payment methods come from Settings.']],
+['Invoices and payments',['Tap Sales, then Invoices, then + New invoice. Or tap Create invoice on a job or approved quote.','Invoice numbers (INV-1001...) are made for you. Due date defaults to 15 days.','Tap Mark sent when you give it to the customer. Past the due date it turns Overdue on its own.','Tap Record payment for cash, check or card. Partial payments are fine; the balance updates.','When fully paid it shows Paid and the job is marked Paid.','Tap Print / Save PDF to print or save a PDF. Tap Email / Share only when you want to send it.']],
+['Printing quotes and invoices',['Open the quote or invoice and tap Print / Save PDF.','In the print window, open More settings and turn off "Headers and footers" for a clean page.','Tap Save PDF to keep a PDF, or Email / Share to send it.','Address, license #, terms and payment methods come from Settings.']],
 ['Clients',['Tap Sales, then Clients. Tap + Add to add a customer with name, phone, email and address.','Tap a customer to see and edit their info.']],
 ['Price book (job templates)',['Tap More, then Price book & checklists.','Tap + New template. Name it (like "Water heater install - 50 gal gas"), add parts with qty, labor hours, trip fee and notes.','Use templates on new quotes with "Start from template".','Items named "Sample -" are examples. Delete them or use Clear sample data in Settings.']],
 ['Parts catalog',['Tap More, then Parts catalog. Add each part with your cost and either a sell price or markup %.','"Last cost paid" updates on its own when you enter an actual cost on a job.']],
@@ -1704,10 +1704,8 @@ const puCat=t=>{t=String(t||'').trim().toLowerCase();return (D.parts||[]).find(p
 function puToActual(jid){if(!isOwner())return;const j=J(jid);if(!j)return;const L=(D.used||[]).filter(u=>u.jobId==jid&&!u.inActual);if(!L.length)return cpNote('Every line on this job is already in the job costs.');
  j.actual=j.actual||[];L.forEach(u=>{const p=puCat(u.text);j.actual.push({partId:p?p.id:'',desc:u.text,qty:u.qty,cost:p?(+p.lastCost>0?+p.lastCost:+p.cost||0):0,date:String(u.at).slice(0,10)});u.inActual=true});
  save();render();cpNote('Added '+L.length+' line'+(L.length>1?'s':'')+' to the job costs. Check any $0 costs in the job.')}
-/* owner: a new invoice from the job also lists parts used that aren't already on the quote, at catalog sell price */
-{const _ji=jobItems;jobItems=function(j){const a=_ji(j);if(!isOwner()||!j)return a;const have=new Set(a.map(i=>String(i.desc||'').trim().toLowerCase()));const M={};
- (D.used||[]).filter(u=>u.jobId==j.id).forEach(u=>{const k=u.text.trim().toLowerCase();if(have.has(k))return;M[k]=M[k]||{u,qty:0};M[k].qty+=+u.qty||0});
- Object.values(M).forEach(({u,qty})=>{const p=puCat(u.text);a.push({type:'part',partId:p?p.id:'',desc:u.text,qty,price:p?Math.round(sell(p)*100)/100:0,cost:p?(+p.lastCost>0?+p.lastCost:+p.cost||0):0})});return a}}
+/* owner: invoice lines include later parts used / restock / actual costs (mergeJobParts) */
+{const _ji=jobItems;jobItems=function(j){const a=_ji(j);return (typeof mergeJobParts==='function'&&isOwner()&&j)?mergeJobParts(a,j):a}}
 
 {const _ej=editJob;editJob=function(id,fq){const r=_ej(id,fq);mdForm(id);return r}}
 
@@ -1731,8 +1729,8 @@ function mdToggleS(){const on=$('#sjmd')?.checked,f=$('#smdfields');if(f)f.style
   const j=J(id);if(lab&&mdMulti(j))lab.insertAdjacentHTML('beforebegin',`<div style="margin:6px 0;font-size:13px;color:var(--m)">${esc(mdFmt(j))}${mdPill(j,mdStart(j))} · moving the start keeps the same number of days.</div>`)}}
 
 /* Phone sheets: iOS back swipe / hash must close the top sheet, not move the page behind it. */
-window.addEventListener('popstate',()=>{if(_sheetIgnorePop){_sheetIgnorePop=false;return}if(document.querySelector('.lb')){document.querySelector('.lb').remove();cpUnlockScroll();if(_sheetPushed)_sheetPushed--;return}if(document.querySelector('#modal > .modal'))_popSheet(true)});
-window.addEventListener('hashchange',e=>{if(document.querySelector('#modal > .modal, .lb'))e.stopImmediatePropagation()},true);
+window.addEventListener('popstate',()=>{if(_sheetIgnorePop){if(!window._cpClearingHash)_sheetIgnorePop=false;return}if(document.querySelector('.lb')){document.querySelector('.lb').remove();cpUnlockScroll();if(_sheetPushed)_sheetPushed--;return}if(document.querySelector('#modal > .modal'))_popSheet(true)});
+window.addEventListener('hashchange',e=>{if(_sheetIgnorePop||document.querySelector('#modal > .modal, .lb'))e.stopImmediatePropagation()},true);
 {const _go=go;go=function(t){if(document.querySelector('#modal > .modal')&&!go._ok)return;return _go(t)}}
 
 
@@ -1920,6 +1918,109 @@ function holJwCheck(){const jw=$('#jw'),box=$('#holjw');if(!jw||!box)return;box.
 {const _sj=saveJob;saveJob=function(id){const d=(($('#jw')||{}).value||'').slice(0,10);const r=_sj(id);if(isOwner()&&d&&!$('#jw')){const x=holInfo(d);if(x)cpNote('⚠ '+holLabel(x)+' · '+holFmt(d)+' (scheduled anyway)')}return r}}
 {const _sq=saveQuick;saveQuick=function(day){const r=_sq(day);if(isOwner()){const x=holInfo(day);if(x&&!$('#qsj'))cpNote('⚠ '+holLabel(x)+' · '+holFmt(day)+' (scheduled anyway)')}return r}}
 {const _cm=calMove;calMove=function(id,day,h){const r=_cm(id,day,h);if(isOwner()){const x=holInfo(day);if(x)cpNote('⚠ Moved to a closed day: '+holLabel(x))}return r}}
+</script>
+<script>
+/* ===== Invoice parts + print =====
+   1) An invoice from a job includes every part later logged on that job
+      (Parts used, finish-checklist restock, and actual part costs), deduped
+      by name. Catalog sell price is cost + 30% markup unless a fixed sell
+      price is set. Opening a Draft/Sent invoice picks up parts added after
+      it was created. Paid invoices are left alone. Techs never see this screen
+      or any cost/markup.
+   2) Print / Save PDF keeps you on the invoice (in-page view + print window
+      or a saved PDF). It does not open Mail. Email / Share is a separate
+      button, only when you tap it. */
+/* Closing a job/invoice sheet used history.go, which fired later and sent
+   the hash (and the screen) back to Home — the invoice looked like it failed to load. */
+{const _mc=modalClear;modalClear=function(){const keep=tab,keepView=view,was=_sheetPushed;_mc();if(!was)return;_sheetIgnorePop=true;window._cpClearingHash=true;setTimeout(()=>{window._cpClearingHash=false;_sheetIgnorePop=false;tab=keep;view=keepView;try{if(location.hash.slice(1)!=tab)history.replaceState(null,'','#'+tab)}catch(e){}if(typeof render==='function')try{render()}catch(e){}},400)}}
+const partKey=s=>String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
+const partSell=p=>{if(!p)return 0;const v=typeof sell=='function'?sell(p):(+p.sell>0?+p.sell:(+p.cost||0)*(1+(+p.markup>0?+p.markup:30)/100));return Math.round(v*100)/100};
+const partCostOf=p=>p?(+p.lastCost>0?+p.lastCost:+p.cost||0):0;
+const partByName=t=>{t=partKey(t);if(typeof puCat=='function'){const p=puCat(t);if(p)return p}return (D.parts||[]).find(p=>partKey(p.name)==t)};
+function jobPartsOnJob(j){if(!j)return [];const M={};
+  const put=(name,qty,partId,onlyIfNew)=>{name=String(name||'').trim();qty=+qty||0;if(!name||!(qty>0))return;const k=partKey(name);
+    if(M[k]){if(!onlyIfNew)M[k].qty+=qty;if(partId&&!M[k].partId)M[k].partId=partId;return}
+    const p=partId&&typeof P=='function'?P(partId):partByName(name);M[k]={desc:name,qty,partId:partId||(p&&p.id)||''}};
+  (D.used||[]).filter(u=>u&&u.jobId==j.id).forEach(u=>put(u.text,u.qty,(partByName(u.text)||{}).id,false));
+  (j.restock||[]).forEach(r=>put(r.text,r.qty,(partByName(r.text)||{}).id,true));
+  (j.actual||[]).forEach(a=>{const p=a.partId&&typeof P=='function'?P(a.partId):null;put(a.desc||(p&&p.name)||'',a.qty,a.partId||(p&&p.id)||'',true)});
+  return Object.values(M).map(r=>{const p=(r.partId&&typeof P=='function'&&P(r.partId))||partByName(r.desc);return{type:'part',partId:r.partId||(p&&p.id)||'',desc:r.desc,qty:r.qty,price:partSell(p),cost:partCostOf(p)}})}
+function mergeJobParts(items,j){const a=(items||[]).map(i=>Object.assign({},i));if(!j)return a;
+  jobPartsOnJob(j).forEach(p=>{const k=partKey(p.desc);const hit=a.find(i=>partKey(i.desc)==k);
+    if(hit){if((+hit.qty||0)<p.qty)hit.qty=p.qty;if(!hit.type)hit.type='part';if(p.partId&&!hit.partId)hit.partId=p.partId;if(hit.cost==null||hit.cost==='')hit.cost=p.cost}
+    else a.push(p)});return a}
+function invItemsEq(a,b){const n=x=>JSON.stringify((x||[]).map(i=>({t:i.type||'',d:partKey(i.desc),q:+i.qty||0,p:+i.price||0})));return n(a)==n(b)}
+function invSyncParts(i){if(typeof isOwner=='function'&&!isOwner())return false;if(!i||i.status==='Paid'||!i.job)return false;const j=typeof J=='function'?J(i.job):null;if(!j)return false;const next=mergeJobParts(i.items||[],j);if(invItemsEq(i.items,next))return false;i.items=next;if(typeof save=='function')save();return true}
+{const _v=viewInvoice;viewInvoice=function(id){const i=IV(id);if(i)invSyncParts(i);return _v(id)}}
+{const _e=editInvoice;editInvoice=function(id,pre){if(id){const i=IV(id);if(i)invSyncParts(i)}else if(pre&&pre.job){const j=J(pre.job);if(j)pre.items=mergeJobParts(pre.items||[],j)}return _e(id,pre)}}
+
+/* Don't let iPhone turn an email address on the invoice into a Mail link */
+const breakMail=s=>String(s??'').replace(/@/g,'\u200B@');
+{const _pd=printDoc;printDoc=function(kind,d){return _pd(kind,d).replace(/([A-Za-z0-9._%+\-]+)@([A-Za-z0-9.\-]+\.[A-Za-z]{2,})/g,(_,a,b)=>a+'\u200B@'+b)}}
+
+function wireDocBtns(h,kind,d){if(!h||!d)return h;return h.replace(/<button class="btn" onclick="print\(\)">Print \/ Save PDF<\/button>/,`<button class="btn" onclick="docPrint('${kind}','${d.id}')">Print / Save PDF</button><button class="btn s" onclick="docShare('${kind}','${d.id}')">Email / Share</button>`)}
+{const _id=invoiceDoc;invoiceDoc=function(i){return wireDocBtns(_id(i),'invoice',i)}}
+{const _qd=quoteDoc;quoteDoc=function(q){return wireDocBtns(_qd(q),'quote',q)}}
+
+const docIOS=()=>/iP(hone|ad|od)/.test(navigator.userAgent||'')||(navigator.platform=='MacIntel'&&navigator.maxTouchPoints>1);
+const docStandalone=()=>navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+function docRef(kind,id){return kind=='quote'?(typeof Q=='function'?Q(id):null):(typeof IV=='function'?IV(id):null)}
+function docFileName(kind,d){return ((kind=='quote'?'Quote':'Invoice')+' '+(d&&d.num||'')+'.pdf').replace(/[\/\\]/g,'-')}
+/* minimal PDF (Helvetica, Letter) for a quote or invoice — same idea as billing-hours PDF */
+function docPDF(kind,d){const W=612,H=792,M=42,LH=14;const s=D.settings||{},c=(typeof C=='function'&&C(d.client))||{},q=kind=='quote';
+  const t=q?(typeof qTotals=='function'?qTotals(d):{sub:0,tax:0,total:0}):(typeof invT=='function'?invT(d):{sub:0,tax:0,total:0,paid:0,bal:0});
+  const co=s.company||'Central Plumbing';
+  const enc=x=>{x=String(x??'').replace(/\u200B/g,'').replace(/[–—]/g,'-').replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/…/g,'...').replace(/×/g,'x');let o='';for(const ch of x){const n=ch.charCodeAt(0);o+=n==0xb7||(n>=32&&n<127)||(n>=0xa0&&n<=0xff)?ch:'?'}return o.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)')};
+  const fit=(x,n)=>{x=String(x??'');return x.length>n?x.slice(0,n-1)+'...':x};
+  const moneyS=n=>typeof money=='function'?money(n):('$'+((+n||0).toFixed(2)));
+  const fmtD=x=>x?new Date(x+'T00:00').toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'}):'';
+  const pages=[];let cur='',y=0;
+  const T=(x,yy,str,b,sz=10,right)=>{const t=enc(str);if(right)x-=t.length*sz*0.5;cur+=`BT /${b?'F2':'F1'} ${sz} Tf ${x.toFixed(1)} ${yy.toFixed(1)} Td (${t}) Tj ET\n`};
+  const line=(y0)=>{cur+=`0.5 w ${M} ${y0} m ${W-M} ${y0} l S\n`};
+  const newPage=()=>{if(cur)pages.push(cur);cur='';y=H-M;T(M,y,co,true,13);T(W-M,y,q?'QUOTE':'INVOICE',true,13,true);y-=14;
+    T(M,y,[s.phone,s.email].filter(Boolean).join('  '),false,8);T(W-M,y,(q?'Quote':'Invoice')+' '+(d.num||''),false,9,true);y-=12;
+    T(M,y,'Date '+fmtD(d.date)+(q?'':'    Due '+(d.due?fmtD(d.due):'upon receipt')),false,9);y-=10;line(y);y-=18};
+  const need=n=>{if(y-n<M+20)newPage()};newPage();
+  const bill=noSample?(noSample(c.name||'')):(c.name||'');
+  need(48);T(M,y,q?'Prepared for':'Bill to',true,8);y-=12;T(M,y,fit(bill,50),true,11);y-=13;
+  if(c.phone){T(M,y,c.phone,false,9);y-=12}if(c.address){T(M,y,fit(c.address,70),false,9);y-=12}y-=6;
+  const items=d.items||[];
+  need(LH*2);T(M,y,'Description',true,9);T(400,y,'Qty / Hrs',true,9);T(470,y,'Rate',true,9,true);T(W-M,y,'Amount',true,9,true);y-=6;line(y);y-=14;
+  items.forEach(i=>{need(LH);const amt=(+i.qty||0)*(+i.price||0);T(M,y,fit(typeof noSample=='function'?noSample(i.desc):i.desc,48),false,9);T(430,y,String(+i.qty||0),false,9,true);T(500,y,moneyS(i.price),false,9,true);T(W-M,y,moneyS(amt),false,9,true);y-=LH});
+  y-=6;line(y);y-=16;
+  const rows=[['Subtotal',t.sub],['Tax ('+(+d.tax||0)+'%)',t.tax],['Total',t.total]];
+  if(!q){(d.payments||[]).forEach(p=>rows.push(['Payment '+(p.date||'')+' '+(p.method||''),-(+p.amount||0)]));rows.push(['Balance due',t.bal])}
+  rows.forEach(([lab,val],i)=>{need(LH+2);const b=lab=='Total'||lab=='Balance due';T(400,y,lab,b,9);T(W-M,y,moneyS(val),b,9,true);y-=LH});
+  if(d.notes){y-=8;need(40);T(M,y,'Notes',true,8);y-=12;String(d.notes).split(/\n/).forEach(line=>{need(LH);T(M,y,fit(line,90),false,9);y-=LH})}
+  pages.push(cur);
+  const objs=[];const add=x=>{objs.push(x);return objs.length};
+  add('<< /Type /Catalog /Pages 2 0 R >>');add('');add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const kids=pages.map(c=>{const st=add(`<< /Length ${c.length} >>\nstream\n${c}endstream`);return add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${st} 0 R >>`)});
+  objs[1]=`<< /Type /Pages /Kids [${kids.map(k=>k+' 0 R').join(' ')}] /Count ${kids.length} >>`;
+  let out='%PDF-1.4\n';const off=[];objs.forEach((o,i)=>{off.push(out.length);out+=`${i+1} 0 obj\n${o}\nendobj\n`});
+  const xr=out.length;out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+off.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+`trailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF`;
+  const u=new Uint8Array(out.length);for(let i=0;i<out.length;i++)u[i]=out.charCodeAt(i)&255;return new Blob([u],{type:'application/pdf'})}
+function docDownload(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  if(docIOS())setTimeout(()=>{try{window.open(u,'_blank')}catch(e){location.assign(u)}},300);
+  setTimeout(()=>URL.revokeObjectURL(u),60000)}
+function docSavePdf(kind,id){const d=docRef(kind,id),m=$('#docmsg');if(!d)return;try{const blob=docPDF(kind,d);docDownload(blob,docFileName(kind,d));if(m)m.textContent='✔ PDF saved. Open it to print or save to Files. Mail is not opened.'}catch(e){console.warn(e);if(m)m.textContent='Could not make the PDF: '+(e.message||e)}}
+function docDoPrint(){const m=$('#modal');if(m)m.innerHTML='';document.body.classList.add('cp-docprint');setTimeout(()=>{try{window.print()}catch(e){docSavePdf(window._docKind,window._docId)}finally{setTimeout(()=>document.body.classList.remove('cp-docprint'),500)}},120)}
+function docPrint(kind,id){const d=docRef(kind,id);if(!d)return;window._docKind=kind;window._docId=id;const ios=docIOS(),sa=docStandalone();
+  modal(`<div id="docpv"><h2 style="margin:0 0 4px">${kind=='quote'?'Print quote':'Print invoice'}</h2>
+  <p style="margin:0 0 10px;color:var(--m)">${esc((kind=='quote'?'Quote ':'Invoice ')+(d.num||''))}</p>
+  ${ios&&sa?`<div class="fcwarn" style="font-weight:400">On iPhone/iPad the home-screen app can't open the print window. Tap <b>Save PDF</b>, then Print or Save to Files from the PDF. This does not open Mail.</div>`:''}
+  <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+  ${ios&&sa?'':`<button class="btn" id="doc_print" onclick="docDoPrint()">🖨 Print</button>`}
+  <button class="btn ${ios&&sa?'':'s'}" id="doc_pdf" onclick="docSavePdf('${kind}','${id}')">📄 ${ios?'Save PDF':'Download PDF'}</button>
+  ${ios&&sa?`<button class="btn s" id="doc_print" onclick="docDoPrint()">Try the print window anyway</button>`:''}
+  <button class="btn s" id="doc_share" onclick="modal();docShare('${kind}','${id}')">✉️ Email / Share</button>
+  <button class="btn s" onclick="modal()">Close</button></div><small id="docmsg" style="display:block;margin-top:8px;color:var(--m)"></small></div>`)}
+async function docShare(kind,id){const d=docRef(kind,id);if(!d)return;const blob=docPDF(kind,d),name=docFileName(kind,d),title=(kind=='quote'?'Quote ':'Invoice ')+(d.num||'');
+  const f=new File([blob],name,{type:'application/pdf'});const c=(typeof C=='function'&&C(d.client))||{};
+  try{if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title,text:title+' from Central Plumbing'});return}catch(e){if(e&&e.name=='AbortError')return}}}catch(e){}
+  docDownload(blob,name);
+  const to=encodeURIComponent(c.email||''),sub=encodeURIComponent(title),body=encodeURIComponent('Please see '+title+' from Central Plumbing.\n\nThe PDF was saved on this device — attach it to this email.');
+  location.href='mailto:'+to+'?subject='+sub+'&body='+body}
 </script>
 <script type="module">
 /* ================================================================
