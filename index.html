@@ -318,7 +318,7 @@ load();render();setInterval(()=>{if(!$('#modal').innerHTML&&(tab=='clock'||tab==
 /* ===== Price book, parts catalog & profit (owner-only cost data) ===== */
 const OWNER_EMAILS=['cdbonser@gmail.com','thecentralplumber@gmail.com'];
 const isOwner=()=>window.userRole?window.userRole==='owner':(!window.userEmail||OWNER_EMAILS.includes(String(window.userEmail).toLowerCase())); // offline/unconfigured = single-device owner
-function norm(x){if(!x)return x;['workers','clients','quotes','jobs','time','parts','templates','invoices','recurring','checklistTemplates','users','notes','leads','messages','priceImports','orders','used'].forEach(k=>{if(!Array.isArray(x[k]))x[k]=[]});x.seq=Object.assign({q:1001,j:1,i:1001},x.seq||{});x.settings=x.settings||blank().settings;return x}
+function norm(x){if(!x)return x;['workers','clients','quotes','jobs','time','parts','templates','invoices','recurring','checklistTemplates','users','notes','leads','messages','priceImports','orders','used','pto'].forEach(k=>{if(!Array.isArray(x[k]))x[k]=[]});x.seq=Object.assign({q:1001,j:1,i:1001},x.seq||{});x.settings=x.settings||blank().settings;return x}
 norm(D);
 
 {const _setD=window.setD;window.setD=x=>_setD(norm(x))}
@@ -759,14 +759,14 @@ let lastSub={};try{lastSub=JSON.parse(localStorage.getItem('cp-lastsub'))||{}}ca
 function goGroup(g){if(g=='more'){if(groupOf(tab)=='more'&&tab!='more'){go('more');return}go(lastSub.more&&lastSub.more!='more'&&isOwner()?'more':'more');return}const subs=GROUPS[g].subs();const t=subs.some(s=>s[0]==lastSub[g])?lastSub[g]:subs[0][0];if(t==tab&&g==groupOf(tab)){scrollTo(0,0);return}go(t)}
 V.more=()=>`<div class="card morelist">${MORE.map(([k,l,i])=>`<button onclick="go('${k}')"><span class="mi">${i}</span><span style="flex:1;text-align:left">${l}</span><span style="color:var(--m)">›</span></button>`).join('')}</div>`;
 document.body.insertAdjacentHTML('beforeend','<nav id="bnav" class="noprint"></nav>');
-{const _r=render;render=function(){_r();if(isTech()&&!['dash','clock','sheets','leads','cal','jobs','help','notif','used'].includes(tab)){tab='dash';_r()}
+{const _r=render;render=function(){_r();if(isTech()&&!['dash','clock','sheets','leads','cal','jobs','help','notif','used','pto'].includes(tab)){tab='dash';_r()}
  const g=groupOf(tab);if(tab!='more'){lastSub[g]=tab;localStorage.setItem('cp-lastsub',JSON.stringify(lastSub))}
  if(location.hash.slice(1)!=tab)history.replaceState(null,'','#'+tab);
  const nl=typeof openLeads=='function'?openLeads().length:0;
  $('#bnav').innerHTML=groupsFor().map(k=>`<button class="${k==g?'on':''}" onclick="goGroup('${k}')"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg><span>${GROUPS[k].l}</span>${k=='home'&&nl?`<i class="bdg">${nl}</i>`:''}${k=='jobs'&&isOwner()&&typeof isUnsched=='function'&&D.jobs.filter(isUnsched).length?`<i class="bdg" style="background:#E0A100" title="Unscheduled jobs">${D.jobs.filter(isUnsched).length}</i>`:''}</button>`).join('');
  const subs=GROUPS[g].subs();let top='';
  if(g=='more'&&tab!='more')top=`<div class="subbar"><button class="back" onclick="go('more')">‹ More</button><b style="align-self:center">${(MORE.find(m=>m[0]==tab)||[])[1]||''}</b></div>`;
- else if(subs.length>1)top=`<div class="seg subseg noprint">${subs.map(([k,l])=>`<button class="${k==tab?'on':''}" onclick="go('${k}')">${l}${k=='leads'&&nl?` <i class="bdg2">${nl}</i>`:''}</button>`).join('')}</div>`;
+ else if(subs.length>1)top=`<div class="seg subseg noprint">${subs.map(([k,l])=>`<button class="${k==tab?'on':''}" onclick="go('${k}')">${l}${k=='leads'&&nl?` <i class="bdg2">${nl}</i>`:''}${k=='pto'&&typeof ptoPend=='function'&&ptoPend()?` <i class="bdg2">${ptoPend()}</i>`:''}</button>`).join('')}</div>`;
  if(top)$('#app').insertAdjacentHTML('afterbegin',top)}}
 window.addEventListener('hashchange',()=>{const t=location.hash.slice(1);if(t&&t!=tab&&(V[t]))go(t)});
 {const h=location.hash.slice(1);if(h&&V[h])tab=h}
@@ -1164,7 +1164,7 @@ const VAPID_PUBLIC='BOovCGs1wlE4p2sxpkUnSK2SjOoj3dQqBrnGZx8BidfEuS7owS-HLiBd4LbE
 // Alert types. Edit labels/defaults here (keep the keys in sync with functions/lib/alerts.js).
 const NOTIF_TECH=[['assigned','You were put on a new job',true],['changed','Your job\'s date or time changed',true],['remind30','Reminders 1 hour and 30 minutes before your job (not for 8 AM starts)',true],['clockout7','Still clocked in for the day at 7 PM',true]];
 const NOTIF_OWNER=[['dayClock','A worker clocks in or out for the day',true],['jobClock','A worker starts or stops a job',true],['completed','A job is marked Completed',true],['notes','A tech adds a field note or lead',true],['orders','Someone adds to a job\'s Need to order list',true],['noteRemind','A "Remind me" you set on a note comes due',true]];
-NOTIF_OWNER.push(['todoPing','Open to-dos: a reminder banner and a phone ping when I open the app (at most every 30 min)']);Object.defineProperty(NOTIF_OWNER[NOTIF_OWNER.length-1],2,{get:()=>TODO_ON.includes(ME())});
+NOTIF_OWNER.push(['pto','A worker sends in a time-off request',true,'mark']);NOTIF_OWNER.push(['todoPing','Open to-dos: a reminder banner and a phone ping when I open the app (at most every 30 min)']);Object.defineProperty(NOTIF_OWNER[NOTIF_OWNER.length-1],2,{get:()=>TODO_ON.includes(ME())});
 const nIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const nStandalone=()=>window.matchMedia&&matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const nCan=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
@@ -1199,7 +1199,7 @@ V.notif=()=>{const s=nState(),o=isOwner();if(window.cpPush&&!nPrefs){nPrefs={};c
  `<div class="nstat ${s=='on'?'on':''}">${s=='on'?'✅ On for this device':'Off for this device'}</div>${s=='on'?`<button class="btn s" onclick="notifOff()" ${nBusy?'disabled':''}>Turn off on this device</button>`:`<button class="btn nbig" onclick="notifOn()" ${nBusy?'disabled':''}>🔔 Turn on notifications</button>`}`}
  ${nMsg?`<p style="font-size:14px;margin-top:10px">${wEsc(nMsg)}</p>`:''}</div>
  <div class="card"><h2 style="font-size:16px">${o?'Alerts about my own jobs':'Which alerts I get'}</h2>${NOTIF_TECH.map(x=>row('tech',x)).join('')}</div>
- ${o?`<div class="card"><h2 style="font-size:16px">Owner alerts</h2>${NOTIF_OWNER.map(x=>row('owner',x)).join('')}<p style="font-size:12.5px;color:var(--m)">These choices are saved for you (${wEsc(window.userEmail||'')}) and apply on all your devices.</p></div>`:'<p style="font-size:12.5px;color:var(--m);padding:0 4px">Your choices apply on all your devices.</p>'}`};
+ ${o?`<div class="card"><h2 style="font-size:16px">Owner alerts</h2>${NOTIF_OWNER.filter(x=>x[3]!=='mark'||ME()==='thecentralplumber@gmail.com').map(x=>row('owner',x)).join('')}<p style="font-size:12.5px;color:var(--m)">These choices are saved for you (${wEsc(window.userEmail||'')}) and apply on all your devices.</p></div>`:'<p style="font-size:12.5px;color:var(--m);padding:0 4px">Your choices apply on all your devices.</p>'}`};
 {const _vd=V.dash;V.dash=()=>notifBanner()+_vd()}
 MORE.splice(MORE.length-1,0,['notif','Notifications','🔔']);TECH_TABS.push('notif');
 {const _hs=GROUPS.home.subs;GROUPS.home.subs=()=>{const s=_hs();return isOwner()?s:[...s,['notif','Alerts']]}}
@@ -1725,6 +1725,105 @@ function setTimeEdit(id,on){const w=W(id);if(!w||!isOwner())return;w.timeEdit=!!
 
 </script>
 <style>.finbar{background:#eef8f0;border:1px solid #cde8d3;border-radius:10px;padding:10px 12px;margin:8px 0 10px;display:flex;flex-direction:column;gap:6px}.finbar.done{background:#f4f6f8;border-color:#e1e5ea}.finbtn{background:#1e8e3e!important;font-size:17px;padding:12px}.pill.rdy{background:#fff3cd;color:#7a5a00}.rdyrow{display:flex;gap:10px;align-items:center;border-top:1px solid #eee;padding:8px 0}.rdycard{border-left:4px solid #1e8e3e}</style>
+<style>
+.ptoform .ptot{padding:11px 6px;border:1.5px solid #c5cfda;background:#fff;border-radius:8px;font-size:14px;font-weight:600;color:var(--t);cursor:pointer;margin:0;min-height:44px}
+.ptoform .ptot.on{background:#111;color:#fff;border-color:#111}
+.ptotypes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ptoform .ptonote{font-size:12.5px;font-style:italic;color:var(--m);margin:10px 0 2px}
+.ptoform .ptohint{font-size:13px;background:#fff6e0;border:1px solid #f0d890;border-radius:8px;padding:8px 10px;margin:8px 0}
+.ptoform .ptoagree{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--t);margin-top:12px}
+.ptoform .ptoagree input{width:22px;height:22px;flex:0 0 22px;margin:0}
+.ptoform #pto_send{width:100%;padding:14px;font-size:17px;margin:12px 0 0}
+.ptoreq{border-left:5px solid #E0A100}.ptoreq.approved{border-left-color:#1e8e4e}.ptoreq.denied{border-left-color:#c0392b}
+.ptost{display:inline-block;font-size:12px;font-weight:700;border-radius:9px;padding:2px 9px;background:#fff3cd;color:#7a5a00}
+.ptost.approved{background:#dff3e5;color:#176b3a}.ptost.denied{background:#fbe0dc;color:#992d22}.ptost.short{background:#ffe7c2;color:#8a4b00}
+.ptoreq .ptoh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.ptoreq .ptol{display:grid;grid-template-columns:96px 1fr;gap:3px 8px;font-size:14px;margin:8px 0}.ptoreq .ptol span{color:var(--m)}
+.ptoreq .ptoact{display:flex;gap:8px;margin-top:8px}.ptoreq .ptoact .btn{flex:1;padding:12px;font-size:15px;margin:0}
+.ptohome{cursor:pointer;border-left:4px solid #E0A100}
+</style>
+<script>
+/* ---------- Time off (the Absence Request sheet) ----------
+   ptoRequests/{id}: by, byName, worker, type, otherText, from, to (YYYY-MM-DD), timeFrom, timeTo (HH:MM, optional), reason,
+   signature (typed name), signedAt, createdAt, status pending|approved|denied, decidedBy/ByName/At, managerComment, shortNotice.
+   Every staff login files their own and sees only their own. Owners see every request and approve or deny it. No pay data here, ever. */
+const PTO_TYPES=['Sick','Vacation','Bereavement','Time Off Without Pay','Military','Jury Duty','Maternity/Paternity','Other'];
+const PTO={d:{type:'',other:'',from:'',to:'',tf:'',tt:'',reason:'',sig:'',ok:false},cm:{},all:false,busy:false,fo:false};
+const ptoFmtDay=d=>{const m=/^(\d{4})-(\d\d)-(\d\d)/.exec(String(d||''));return m?new Date(Date.UTC(+m[1],+m[2]-1,+m[3])).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}):''};
+const ptoClock=t=>{const m=/^(\d\d):(\d\d)$/.exec(String(t||''));if(!m)return '';let h=+m[1];const ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+m[2]+' '+ap};
+const ptoDates=r=>{const a=ptoFmtDay(r.from),b=ptoFmtDay(r.to||r.from);return !b||a===b?a:a+' – '+b};
+const ptoTimes=r=>r.timeFrom&&r.timeTo?ptoClock(r.timeFrom)+' – '+ptoClock(r.timeTo):'Full day'+((r.to&&r.to!==r.from)?'s':'');
+const ptoTypeL=r=>r.type==='Other'&&r.otherText?'Other: '+r.otherText:(r.type||'Time off');
+const ptoWho=()=>(W(myWorkerId())||{}).name||ordWho();
+const ptoList=()=>(D.pto||[]).filter(r=>isOwner()||r.by===ME());
+const ptoPend=()=>isOwner()?(D.pto||[]).filter(r=>r.status==='pending').length:0;
+const ptoSort=(a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''));
+const ptoMins=t=>{const m=/^(\d\d):(\d\d)$/.exec(t||'');return m?+m[1]*60+ +m[2]:-1};
+{const _s=GROUPS.home.subs;GROUPS.home.subs=()=>{const a=_s();return isBilling()?a:a.concat([['pto','PTO']])}}
+TECH_TABS.push('pto');
+function ptoHint(){const h=$('#pto_hint');if(!h)return;const d=PTO.d;const lim=addDays(tod(),14);
+  h.innerHTML=d.from&&d.type&&d.type!=='Sick'&&d.from<lim?'<div class="ptohint">⏰ This starts less than 2 weeks from today. The sheet asks for 2 weeks’ notice (sick days are the exception). You can still send it.</div>':''}
+function ptoType(t){PTO.d.type=t;render()}
+function ptoForm(){const d=PTO.d,who=ptoWho(),f=k=>esc(d[k]||'');
+ return `<div class="card ptoform"><h2>🌴 Request time off</h2><small style="color:var(--m)">Central Plumbing · Absence Request</small>
+ <label>Employee name</label><input id="pto_name" value="${esc(who)}" readonly style="background:#f3f4f6">
+ <label>Type of absence requested</label>
+ <div class="ptotypes">${PTO_TYPES.map(t=>`<button type="button" class="ptot ${d.type===t?'on':''}" onclick="ptoType('${t}')">${esc(t)}</button>`).join('')}</div>
+ ${d.type==='Other'?`<input id="pto_other" placeholder="What is it for?" maxlength="80" value="${f('other')}" oninput="PTO.d.other=this.value" style="margin-top:8px">`:''}
+ <div class="row" style="align-items:end;margin-top:4px"><div><label>Dates of absence · From</label><input id="pto_from" type="date" value="${f('from')}" onchange="PTO.d.from=this.value;if(!PTO.d.to||PTO.d.to<this.value){PTO.d.to=this.value;$('#pto_to').value=this.value}ptoHint()"></div>
+ <div><label>To</label><input id="pto_to" type="date" value="${f('to')}" onchange="PTO.d.to=this.value"></div></div>
+ <label>Amount of time off requested <span style="font-weight:400">(optional · leave blank for full days; at least 1 hour)</span></label>
+ <div class="row" style="align-items:center"><div><input id="pto_tf" type="time" value="${f('tf')}" onchange="PTO.d.tf=this.value"></div><span style="flex:0 0 auto;color:var(--m)">to</span><div><input id="pto_tt" type="time" value="${f('tt')}" onchange="PTO.d.tt=this.value"></div></div>
+ <label>Reason for absence</label><textarea id="pto_reason" rows="3" maxlength="600" oninput="PTO.d.reason=this.value" placeholder="A short reason">${f('reason')}</textarea>
+ <p class="ptonote">You must submit requests for absences, other than PTO for illness, at least 2 weeks prior to the first day you will be absent. Time of absences may not be less than 1 hour.</p>
+ <div id="pto_hint"></div>
+ <label>Employee signature <span style="font-weight:400">(type your full name)</span></label><input id="pto_sig" maxlength="80" autocomplete="name" value="${f('sig')}" oninput="PTO.d.sig=this.value">
+ <div style="font-size:13px;color:var(--m);margin-top:4px">Date: ${esc(ptoFmtDay(tod()))}</div>
+ <label class="ptoagree"><input type="checkbox" id="pto_ok" ${d.ok?'checked':''} onchange="PTO.d.ok=this.checked"><span>My typed name above is my signature, and I'm sending this request for the dates shown.</span></label>
+ <button class="btn" id="pto_send" onclick="ptoSend()" ${PTO.busy?'disabled':''}>Send request</button></div>`}
+function ptoSend(){const d=PTO.d;
+ if(!d.type)return cpNote('Pick the type of absence.');
+ if(d.type==='Other'&&!d.other.trim())return cpNote('Tell us what “Other” is for.');
+ if(!d.from)return cpNote('Pick the first day you’ll be out.');
+ const to=d.to||d.from;if(to<d.from)return cpNote('The last day can’t be before the first day.');
+ if(!!d.tf!==!!d.tt)return cpNote('Fill in both times, or leave both blank for full days.');
+ if(d.tf){const a=ptoMins(d.tf),b=ptoMins(d.tt);if(!(b>a))return cpNote('The end time needs to be after the start time.');if(b-a<60)return cpNote('Time off can’t be less than 1 hour.')}
+ if(!d.reason.trim())return cpNote('Add a short reason.');
+ if(!d.sig.trim())return cpNote('Type your full name to sign.');
+ if(!d.ok)return cpNote('Check the box to confirm your signature.');
+ if(PTO.busy)return;PTO.busy=true;const now=new Date().toISOString();
+ const r={id:uid()+uid(),by:ME(),byName:ptoWho().slice(0,80),worker:myWorkerId()||'',type:d.type,from:d.from,to,reason:d.reason.trim().slice(0,600),signature:d.sig.trim().slice(0,80),signedAt:now,createdAt:now,status:'pending'};
+ if(d.type==='Other')r.otherText=d.other.trim().slice(0,80);if(d.tf){r.timeFrom=d.tf;r.timeTo=d.tt}
+ if(d.type!=='Sick'&&d.from<addDays(tod(),14))r.shortNotice=true;
+ D.pto=D.pto||[];D.pto.push(r);PTO.d={type:'',other:'',from:'',to:'',tf:'',tt:'',reason:'',sig:'',ok:false};
+ save();setTimeout(()=>{PTO.busy=false;render()},400);cpNote('Request sent ✔')}
+function ptoCard(r,own){const o=isOwner(),done=r.status!=='pending',st=r.status==='approved'?'Approved':r.status==='denied'?'Denied':'Waiting for approval';
+ return `<div class="card ptoreq ${esc(r.status)}"><div class="ptoh"><b style="flex:1;font-size:16px;min-width:90px">${esc(o||!own?r.byName||r.by:ptoTypeL(r))}</b><span class="ptost ${esc(r.status)}">${st}</span>${r.shortNotice&&o&&!done?'<span class="ptost short">Short notice</span>':''}</div>
+ <div class="ptol">${o?`<span>Type</span><b>${esc(ptoTypeL(r))}</b>`:''}<span>Dates</span><b>${esc(ptoDates(r))}</b><span>Time off</span><b>${esc(ptoTimes(r))}</b><span>Reason</span><div style="white-space:pre-wrap">${esc(r.reason||'—')}</div>${o?`<span>Signed</span><div>${esc(r.signature||'—')} · ${esc(ptoFmtDay(String(r.signedAt||r.createdAt).slice(0,10)))}</div>`:''}<span>Sent</span><div>${esc(fmtDT(r.createdAt))}</div>
+ ${done?`<span>${o?'Decision':'Answer'}</span><div>${esc(st)}${r.decidedAt?' · '+esc(fmtDT(r.decidedAt)):''}${o&&r.decidedByName?' · '+esc(r.decidedByName):''}</div>${r.managerComment?`<span>Comments</span><div style="white-space:pre-wrap">${esc(r.managerComment)}</div>`:''}`:''}</div>
+ ${o?(done?`<div class="ptoact"><button class="btn sm s" onclick="ptoDecide('${r.id}','pending')">Undo — back to waiting</button></div>`
+   :`<label>Comments (optional)</label><input id="pto_c_${r.id}" value="${esc(PTO.cm[r.id]||'')}" maxlength="300" oninput="PTO.cm['${r.id}']=this.value" placeholder="Shown to ${esc(r.byName||'them')} with the answer"><div class="ptoact"><button class="btn g" onclick="ptoDecide('${r.id}','approved')">✓ Approve</button><button class="btn d" onclick="ptoDecide('${r.id}','denied')">✕ Deny</button></div>`)
+   :(r.status==='pending'&&r.by===ME()?`<div class="ptoact"><button class="btn sm s" onclick="ptoWithdraw('${r.id}')">Withdraw request</button></div>`:'')}</div>`}
+function ptoDecide(id,st){if(!isOwner())return;const r=(D.pto||[]).find(x=>x.id==id);if(!r)return;
+ if(st==='pending'){r.status='pending';delete r.decidedBy;delete r.decidedByName;delete r.decidedAt}
+ else{const c=(($('#pto_c_'+id)||{}).value||PTO.cm[id]||'').trim();r.status=st;r.decidedBy=ME();r.decidedByName=ordWho();r.decidedAt=new Date().toISOString();if(c)r.managerComment=c.slice(0,300);else delete r.managerComment;delete PTO.cm[id]}
+ save();render();cpNote(st==='approved'?'Approved ✔':st==='denied'?'Denied':'Back to waiting')}
+function ptoWithdraw(id){const r=(D.pto||[]).find(x=>x.id==id);if(!r||r.by!==ME()||r.status!=='pending')return;if(!confirm('Withdraw this request?'))return;D.pto=D.pto.filter(x=>x.id!=id);save();render()}
+V.pto=()=>{if(isBilling())return '<div class="card">Not available for this login.</div>';const o=isOwner(),L=ptoList().sort(ptoSort);
+ if(!o)return ptoForm()+`<h3 style="margin:18px 4px 8px">My requests</h3>`+(L.map(r=>ptoCard(r,true)).join('')||'<div class="card"><small style="color:var(--m)">You haven’t sent a time-off request yet.</small></div>');
+ const P=L.filter(r=>r.status==='pending').sort((a,b)=>String(a.from).localeCompare(String(b.from))),Dn=L.filter(r=>r.status!=='pending'),shown=PTO.all?Dn:Dn.slice(0,15);
+ return `<h3 style="margin:2px 4px 8px">Waiting for an answer${P.length?` <i class="bdg2">${P.length}</i>`:''}</h3>${P.map(r=>ptoCard(r,false)).join('')||'<div class="card"><small style="color:var(--m)">Nothing waiting. 🎉</small></div>'}
+ <h3 style="margin:18px 4px 8px">Answered</h3>${shown.map(r=>ptoCard(r,false)).join('')||'<div class="card"><small style="color:var(--m)">No answered requests yet.</small></div>'}${Dn.length>15?`<button class="btn s" onclick="PTO.all=!PTO.all;render()">${PTO.all?'Show fewer':'Show all '+Dn.length}</button>`:''}
+ <details class="card" style="margin-top:14px" ${PTO.fo||PTO.d.type||PTO.d.from?'open':''} ontoggle="PTO.fo=this.open"><summary style="font-weight:700;cursor:pointer">Request time off for myself</summary>${ptoForm().replace('<div class="card ptoform">','<div class="ptoform" style="margin-top:8px">')}</details>
+ ${L.filter(r=>r.by===ME()).length?`<h3 style="margin:18px 4px 8px">My own requests</h3>${L.filter(r=>r.by===ME()).map(r=>ptoCard(r,true)).join('')}`:''}`};
+/* owners: a banner on Today when requests are waiting */
+{const _vd=V.dash;V.dash=()=>{const h=_vd();if(!isOwner())return h;const n=ptoPend();return (n?`<div class="card ptohome" onclick="go('pto')"><b>🌴 ${n} time-off request${n>1?'s':''} waiting</b> <span style="color:var(--m)">· tap to review ›</span></div>`:'')+h}}
+/* a live update must not wipe a form someone is typing in */
+{const _rr=window.rerender;window.rerender=()=>{const a=document.activeElement;if(tab=='pto'&&!$('#modal').innerHTML&&a&&/^pto_/.test(a.id||'')){clearTimeout(PTO.rt);PTO.rt=setTimeout(()=>window.rerender(),1500);return}_rr()}}
+/* push tap on a time-off alert opens the Time off tab (owners) */
+const _ptoGoLater=()=>{let n=0;const t=setInterval(()=>{if((typeof isOwner=='function'&&isOwner()&&(go('pto'),1))||++n>40){clearInterval(t);history.replaceState(null,'',location.pathname)}},500)};
+if(new URLSearchParams(location.search).get('tab')==='pto')_ptoGoLater();
+if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.tab==='pto'&&isOwner())go('pto')});
+</script>
 <script type="module">
 /* ================================================================
    FIREBASE CONFIG — paste your config from Firebase Console here
@@ -1741,9 +1840,9 @@ const firebaseConfig = {
 /* ================================================================ */
 const COMPANY='main';
 // D key -> Firestore collection. priv = fields moved to an owner-only "<collection>_private" doc
-const SPEC={clients:{c:'clients'},workers:{c:'workers',priv:['rate','cost']},jobs:{c:'jobs',priv:['actual']},quotes:{c:'quotes'},time:{c:'timeEntries'},parts:{c:'parts'},templates:{c:'templates'},invoices:{c:'invoices'},recurring:{c:'recurring'},checklistTemplates:{c:'checklistTemplates'},users:{c:'users'},notes:{c:'notes'},leads:{c:'leads'},messages:{c:'messages'},priceImports:{c:'priceImports'},orders:{c:'orderItems'},used:{c:'partsUsed'}};
+const SPEC={clients:{c:'clients'},workers:{c:'workers',priv:['rate','cost']},jobs:{c:'jobs',priv:['actual']},quotes:{c:'quotes'},time:{c:'timeEntries'},parts:{c:'parts'},templates:{c:'templates'},invoices:{c:'invoices'},recurring:{c:'recurring'},checklistTemplates:{c:'checklistTemplates'},users:{c:'users'},notes:{c:'notes'},leads:{c:'leads'},messages:{c:'messages'},priceImports:{c:'priceImports'},orders:{c:'orderItems'},used:{c:'partsUsed'},pto:{c:'ptoRequests'}};
 // what techs may write: collection -> owner field that must equal their email, and whether they may delete
-const TECHW={time:{f:'email',del:false},notes:{f:'by',del:false},leads:{f:'by',del:false},orders:{f:'by',del:true},used:{f:'by',del:true}};
+const TECHW={time:{f:'email',del:false},notes:{f:'by',del:false},leads:{f:'by',del:false},orders:{f:'by',del:true},used:{f:'by',del:true},pto:{f:'by',del:true}};
 const SCHEMA=2;
 const $=s=>document.querySelector(s), body=$('#authbody'), st=$('#syncst');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1841,6 +1940,7 @@ async function start(){
       listenCol('leads',F.query(F.collection(co,'leads'),F.where('by','==',me)));
       listenCol('orders',F.query(F.collection(co,'orderItems'),F.where('techEmails','array-contains',me)));
       listenCol('used',F.query(F.collection(co,'partsUsed'),F.where('techEmails','array-contains',me)));
+      listenCol('pto',F.query(F.collection(co,'ptoRequests'),F.where('by','==',me)));
       unsubs.push(F.onSnapshot(F.doc(co,'partNames','list'),s=>{window.cpPartNames=(s.exists()&&s.data().names)||[]},()=>{}));
       unsubs.push(F.onSnapshot(pubRef,s=>{if(!s.exists())return;const D=getD();Object.assign(D.settings,s.data());apply(D,s)},err));
     }
