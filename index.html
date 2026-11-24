@@ -105,6 +105,16 @@ main{padding-bottom:calc(90px + env(safe-area-inset-bottom))}
 .finbar{margin-top:16px;border-top:1px solid #e3e6ea;padding-top:12px}.finbar .finbtn{width:100%;display:block}
 .rsit{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid #eef0f2}.rsit input{width:22px;height:22px;margin-top:2px}.rsit.done span{color:var(--m);text-decoration:line-through}
 @media print{.tw{overflow:visible!important}.bhw{break-inside:auto}.bht tr{break-inside:avoid}#modal{display:none!important}}
+.holtag{background:#fde8e8;color:#9b1c1c;border:1px solid #f1b8b8;border-radius:6px;font-size:12px;font-weight:700;padding:2px 6px;margin:3px 0;line-height:1.25}.holtag.inl{display:inline-block;margin:0 0 0 8px;vertical-align:middle}
+.cd.hol,.cm.hol,.mc.hol,.crewd.hol,td.cd.hol,.cday.holbg{background:#fdf3f3}.cd.hol,.cm.hol,.mc.hol{border-color:#f1b8b8}.mgrid>.mc{min-width:0}.mc.hol .holm{font-size:9px;line-height:1.1;font-weight:700;color:#9b1c1c;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc.hol .mcn{color:#9b1c1c}.crew th.hol{background:#fdf3f3;color:#9b1c1c}.crew th.hol small{display:block;font-size:10px;font-weight:700}
+.holhome,.holday{border-left:4px solid #c53030;background:#fff5f5}.holhome.soon{border-left-color:#E0A100;background:#fffbea}.holhome b,.holday b{font-size:15px}
+.jday.jclosed{background:#fff5f5;border-left:4px solid #c53030}
+.holwarn{background:#fffbea;border:1px solid #f0d890;color:#7a5b00;border-radius:8px;padding:6px 10px;font-size:13px;margin:6px 0}
+.holform .row{align-items:end}.holrow{display:flex;gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--l)}.holrow:first-of-type{border-top:0}
+.holrow .hd{flex:1;min-width:0}.holrow .hd b{display:block;font-size:15px}.holrow .hd span{color:var(--m);font-size:14px}.holrow.past{opacity:.55}
+.holsrc{font-size:11px;font-weight:700;border-radius:10px;padding:2px 8px;background:#eef2f7;color:#4a5568;white-space:nowrap}.holsrc.mine{background:#e6f4ea;color:#1e6b3a}
+.holnote{font-size:13px;color:var(--m);margin:4px 0}
 </style></head><body>
 <header><h1 id="cname"><img src="logo-mono-white.png" alt="" class="hlogo">Central Plumbing</h1><span style="font-size:12px;opacity:.8" id="today"></span><span id="syncst"></span><button class="btn s sm noprint" id="signout" style="display:none">Sign out</button></header>
 <div class="auth" id="auth"><div><div style="text-align:center;margin-bottom:12px"><img src="logo.png" alt="Central Plumbing" style="width:190px;max-width:70%"></div><div id="authbody"><p style="color:var(--m)">Loading…</p></div></div></div>
@@ -128,6 +138,31 @@ function hms(h){const s=Math.max(0,Math.floor(h*3600));return Math.floor(s/3600)
 function jcBar(j){if(!j||!j.id||typeof myWorkerId!='function')return '';const me=myWorkerId(),own=isOwner();const ws=(j.workers||[]).filter(w=>own||w==me);if(!ws.length||['Paid','Invoiced'].includes(j.status)&&!ws.some(w=>jobOpen(w)?.job==j.id))return '';
  return `<div class="jcb" onclick="event.stopPropagation()" ondragstart="event.stopPropagation()">${ws.map(w=>{const r=jobOpen(w),on=r&&r.job==j.id;return `<div class="jcr">${own?wChip(w,1):''}<b class="jcn">${wEsc(jName(j))}</b>${on?`<span class="jtimer" data-since="${r.in}">${hms(hrsX(r))}</span><button class="btn sm d" data-tip="Stop the job clock on ${wEsc(jName(j))}. The day clock keeps running." onclick="event.stopPropagation();jobStop('${w}')">■ Stop job</button>`:`<button class="btn sm g" data-tip="Start the job clock on ${wEsc(jName(j))}. This is the time you can bill the customer." onclick="event.stopPropagation();jobStart('${w}','${j.id}')">▶ Start job</button>`}</div>`}).join('')}</div>`}
 function telD(v){const p=phDigits(v);return p.length==10?p:String(v??'').replace(/[^\d+]/g,'')}
+</script>
+<script>
+/* ---------- Closed days (holidays): shared helpers ----------
+   Standard holidays are COMPUTED here for any year (nothing to seed): New Year's Day, Memorial Day, July 4th, Labor Day,
+   Thanksgiving, Christmas. A standard holiday is closed ONLY when its real date is Mon-Fri (no moving a weekend holiday to a
+   nearby weekday). Owners can add their own closed dates and remove (hide) a standard one. Those choices live in
+   companies/main/holidays/{YYYY-MM-DD}: {date, name, closed:true}  = a closed day an owner added / renamed
+                                          {date, name, closed:false} = a standard holiday an owner removed. */
+function holStd(y){const pad=n=>String(n).padStart(2,'0'),dow=(m,d)=>new Date(Date.UTC(y,m-1,d)).getUTCDay();
+ const nth=(m,wd,n)=>1+((wd-dow(m,1)+7)%7)+7*(n-1),last=(m,wd)=>{const dim=new Date(Date.UTC(y,m,0)).getUTCDate();return dim-((dow(m,dim)-wd+7)%7)};
+ return [["New Year's Day",1,1],['Memorial Day',5,last(5,1)],['July 4th',7,4],['Labor Day',9,nth(9,1,1)],['Thanksgiving',11,nth(11,4,4)],['Christmas',12,25]]
+  .map(([name,m,d])=>({name,date:y+'-'+pad(m)+'-'+pad(d),wd:dow(m,d)}))}
+const holWeekday=wd=>wd>=1&&wd<=5;
+const _holY={};const holStdYear=y=>_holY[y]||(_holY[y]=holStd(y));
+function holStdOn(date){const y=+String(date).slice(0,4);if(!y)return null;const s=holStdYear(y).find(h=>h.date===date);return s&&holWeekday(s.wd)?s:null}
+function holDoc(date){return ((typeof D!=='undefined'&&D&&D.holidays)||[]).find(h=>h&&(h.id===date||h.date===date))||null}
+/* the one answer everything uses: null = open, else {date,name,std} */
+function holInfo(date){date=String(date||'').slice(0,10);if(!/^\d{4}-\d\d-\d\d$/.test(date))return null;
+ const d=holDoc(date),s=holStdOn(date);
+ if(d)return d.closed===false?null:{date,name:String(d.name||(s&&s.name)||'Closed'),std:!!s&&(!d.name||d.name===s.name)};
+ return s?{date,name:s.name,std:true}:null}
+const holLabel=x=>'Closed – '+x.name;
+const holTag=d=>{const x=holInfo(d);return x?`<div class="holtag">🚫 ${esc(holLabel(x))}</div>`:''};
+const holCls=d=>holInfo(d)?' hol':'';
+function holEach(from,n){const o=[];const d=new Date(from+'T12:00:00Z');for(let i=0;i<n;i++){const k=d.toISOString().slice(0,10),h=holInfo(k);if(h)o.push(h);d.setUTCDate(d.getUTCDate()+1)}return o}
 </script>
 <script>
 const K='plumbingAppData_v1';const TABS=[['dash','Dashboard'],['clock','Time Clock'],['jobs','Jobs'],['quotes','Quotes'],['clients','Clients'],['workers','Workers'],['sheets','Timesheets'],['settings','Settings']];
@@ -318,7 +353,7 @@ load();render();setInterval(()=>{if(!$('#modal').innerHTML&&(tab=='clock'||tab==
 /* ===== Price book, parts catalog & profit (owner-only cost data) ===== */
 const OWNER_EMAILS=['cdbonser@gmail.com','thecentralplumber@gmail.com'];
 const isOwner=()=>window.userRole?window.userRole==='owner':(!window.userEmail||OWNER_EMAILS.includes(String(window.userEmail).toLowerCase())); // offline/unconfigured = single-device owner
-function norm(x){if(!x)return x;['workers','clients','quotes','jobs','time','parts','templates','invoices','recurring','checklistTemplates','users','notes','leads','messages','priceImports','orders','used','pto'].forEach(k=>{if(!Array.isArray(x[k]))x[k]=[]});x.seq=Object.assign({q:1001,j:1,i:1001},x.seq||{});x.settings=x.settings||blank().settings;return x}
+function norm(x){if(!x)return x;['workers','clients','quotes','jobs','time','parts','templates','invoices','recurring','checklistTemplates','users','notes','leads','messages','priceImports','orders','used','pto','holidays'].forEach(k=>{if(!Array.isArray(x[k]))x[k]=[]});x.seq=Object.assign({q:1001,j:1,i:1001},x.seq||{});x.settings=x.settings||blank().settings;return x}
 norm(D);
 
 {const _setD=window.setD;window.setD=x=>_setD(norm(x))}
@@ -471,13 +506,17 @@ const ctYmd=d=>d.toLocaleDateString('en-CA',{timeZone:'America/Chicago'});
 function jobDayLabel(k,t){const add=n=>{const d=new Date(t+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
  const nice=new Date(k+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric',year:k.slice(0,4)==t.slice(0,4)?undefined:'numeric'});
  return k==t?'Today · '+nice:k==add(1)?'Tomorrow · '+nice:k==add(-1)?'Yesterday · '+nice:nice}
-function jobDays(L){if(!L.length)return '<div class="card"><span style="color:var(--m)">No jobs.</span></div>';
+function holJobDayList(t){if((jf.q&&jf.q.trim())||jf.status||jf.worker||jf.date||jf.range=='unsched'||jf.range=='ready')return [];
+ if(jf.range=='today')return holEach(t,1);if(jf.range=='week'){const a=ymd(weekStart(new Date()));return holEach(a,7)}return holEach(t,45)}
+function holEmptyCard(x,t){return `<div class="card jday jclosed"><h2 style="margin:0">${esc(jobDayLabel(x.date,t))}<span class="holtag inl">🚫 ${esc(holLabel(x))}</span></h2><small style="color:var(--m)">No jobs scheduled.</small></div>`}
+function jobDays(L){if(!L.length){const t0=ctYmd(new Date()),hc=holJobDayList(t0);return hc.length?hc.map(x=>holEmptyCard(x,t0)).join(''):'<div class="card"><span style="color:var(--m)">No jobs.</span></div>'}
  const t=ctYmd(new Date()),G={},none=[];
  const noneC=[];L.forEach(j=>{const days=mdDaysInView(j);if(!days.length){if(!mdStart(j))(isUnsched(j)?none:noneC).push(j)}else days.forEach(k=>(G[k]=G[k]||[]).push(j))});
  if(jf.range=='unsched'){for(const k in G)delete G[k];noneC.length=0;if(!none.length)return '<div class="card"><span style="color:var(--m)">No unscheduled jobs. Nice!</span></div>'}
+ const HC={};holJobDayList(t).forEach(x=>{HC[x.date]=x;if(!G[x.date])G[x.date]=[]});
  const ks=Object.keys(G),up=ks.filter(k=>k>=t).sort(),past=ks.filter(k=>k<t).sort();none.sort(byJobNum);noneC.sort(byJobNum);
  const n=a=>`<span class="pill" style="margin-left:6px">${a.length} job${a.length==1?'':'s'}</span>`;
- const grp=(k,tip)=>`<div class="card jday"><h2 style="margin:0 0 8px" data-tip="${tip}">${esc(jobDayLabel(k,t))}${n(G[k])}</h2>${jobTable(G[k],k)}</div>`;
+ const grp=(k,tip)=>{const hx=holInfo(k);if(hx&&!G[k].length)return holEmptyCard(hx,t);return `<div class="card jday${hx?' jclosed':''}"><h2 style="margin:0 0 8px" data-tip="${tip}">${esc(jobDayLabel(k,t))}${n(G[k])}${hx?`<span class="holtag inl">🚫 ${esc(holLabel(hx))}</span>`:''}</h2>${jobTable(G[k],k)}</div>`};
  let h='';
   if(past.length||noneC.length){const c=past.reduce((a,k)=>a+G[k].length,0)+noneC.length;
   h+=`<details class="card jearlier"${(jf.q&&jf.q.trim())||!(up.length||none.length)?' open':''}><summary data-tip="Tap to show or hide jobs from past days, oldest first." style="cursor:pointer;font-weight:600">Earlier <span class="pill" style="margin-left:6px">${c} job${c==1?'':'s'}</span></summary>${noneC.length?`<div class="card jday"><h2 style="margin:0 0 8px" data-tip="Finished jobs that never had a date.">No date (closed)${n(noneC)}</h2>${jobTable(noneC)}</div>`:''}${past.map(k=>grp(k,'Jobs that were scheduled for this day.')).join('')}</details>`}
@@ -589,7 +628,7 @@ V.cal=()=>{if(!cal.d)cal.d=tod();const d=cal.d;let a,b,body='',title;
  if(cal.v=='day'){a=d;b=addDays(d,1);title=new Date(d+'T00:00').toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});const L=calJobs(a,b);
   body=`<div class="cday">${[...Array(15)].map((_,i)=>{const h=i+6;return `<div class="hr" ${dropAttr(d,h)} onclick="calCell('${d}',${h})"><div class="hl">${(h%12)||12}${h<12?'a':'p'}</div><div style="flex:1">${L.filter(j=>+j.when.slice(11,13)==h||(h==6&&+j.when.slice(11,13)<6)||(h==20&&+j.when.slice(11,13)>20)).map(j=>chip(j,d)).join('')}</div></div>`}).join('')}</div>`}
  else if(cal.v=='week'){a=ymd(weekStart(new Date(d+'T00:00')));b=addDays(a,7);title='Week of '+new Date(a+'T00:00').toLocaleDateString([],{month:'short',day:'numeric'});const L=calJobs(a,b);
-  body=`<div class="cweek">${[...Array(7)].map((_,i)=>{const day=addDays(a,i);return `<div class="cd ${day==tod()?'today':''}" ${dropAttr(day)} onclick="calCell('${day}')"><div class="cdh" onclick="event.stopPropagation();cal.v='day';cal.d='${day}';render()">${new Date(day+'T00:00').toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'})}</div>${L.filter(j=>mdOn(j,day)).map(j=>chip(j,day)).join('')}</div>`}).join('')}</div>`}
+  body=`<div class="cweek">${[...Array(7)].map((_,i)=>{const day=addDays(a,i);return `<div class="cd ${day==tod()?'today':''}${holCls(day)}" ${dropAttr(day)} onclick="calCell('${day}')"><div class="cdh" onclick="event.stopPropagation();cal.v='day';cal.d='${day}';render()">${new Date(day+'T00:00').toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'})}</div>${holTag(day)}${L.filter(j=>mdOn(j,day)).map(j=>chip(j,day)).join('')}</div>`}).join('')}</div>`}
  else{const f=new Date(d+'T00:00');f.setDate(1);const m=f.getMonth();a=ymd(weekStart(f));b=addDays(a,42);title=f.toLocaleDateString([],{month:'long',year:'numeric'});const L=calJobs(a,b);
   body=`<div class="cmonth">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(x=>`<div class="cmh">${x}</div>`).join('')}${[...Array(42)].map((_,i)=>{const day=addDays(a,i),jl=L.filter(j=>mdOn(j,day));return `<div class="cm ${new Date(day+'T00:00').getMonth()!=m?'other':''} ${day==tod()?'today':''}" ${dropAttr(day)} onclick="calCell('${day}')"><div class="cdh" onclick="event.stopPropagation();cal.v='day';cal.d='${day}';render()">${+day.slice(8)}</div>${jl.slice(0,3).map(j=>`<div class="mdot" ${isOwner()?`draggable="true" ondragstart="event.dataTransfer.setData('text/plain','${j.id}')"`:''} onclick="event.stopPropagation();calTap('${j.id}')" style="background:${wColor((j.workers||[])[0])}">${new Date(j.when).toLocaleTimeString([],{hour:'numeric'})} ${jobClient(j)}</div>`).join('')}${jl.length>3?`<small>+${jl.length-3} more</small>`:''}</div>`}).join('')}</div>`}
  const step=n=>cal.v=='day'?addDays(d,n):cal.v=='week'?addDays(d,7*n):(()=>{const x=new Date(d+'T00:00');x.setDate(1);x.setMonth(x.getMonth()+n);return ymd(x)})();
@@ -691,8 +730,8 @@ function weekText(wid,a){const w=W(wid);const L=D.jobs.filter(j=>(j.workers||[])
  return `${D.settings.company} schedule for ${w?w.name:''} (week of ${new Date(a+'T00:00').toLocaleDateString([],{month:'short',day:'numeric'})}):\n`+(L.map(j=>{const d=new Date(j.when);const c=C(j.client)||{};return `• ${d.toLocaleDateString([],{weekday:'long'})} the ${ord(d.getDate())}, ${fmtT(d)}: ${c.name||j.clientName||''}${(c.address||j.clientAddress)?' — '+(c.address||j.clientAddress):''}${j.desc?' ('+j.desc+')':''}`}).join('\n')||'No jobs scheduled.')}
 async function sendSched(wid,a){const t=weekText(wid,a);try{if(navigator.share){await navigator.share({text:t});return}}catch(e){if(e.name=='AbortError')return}location.href='sms:?&body='+encodeURIComponent(t)}
 function crewView(a){const days=[...Array(7)].map((_,i)=>addDays(a,i));const ws=(cal.w?D.workers.filter(w=>w.id==cal.w):D.workers);
- if(innerWidth<700)return ws.map(w=>`<div class="crewm" style="border-left:5px solid ${wColor(w.id)}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(w.name)}</b><button class="btn sm s" onclick="sendSched('${w.id}','${a}')">📤 Send schedule</button></div>${days.map(d=>{const L=D.jobs.filter(j=>(j.workers||[]).includes(w.id)&&mdOn(j,d)).sort((x,y)=>x.when.localeCompare(y.when));return `<div class="crewd ${d==tod()?'today':''}" ${dropAttr(d)} onclick="calCellW('${d}','${w.id}')"><div class="cdh">${new Date(d+'T00:00').toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})}</div>${L.map(j=>chip(j,d)).join('')||'<small style="color:#aaa">— tap to assign</small>'}</div>`}).join('')}</div>`).join('');
- return `<div class="tw"><table class="crew"><tr><th>Worker</th>${days.map(d=>`<th class="${d==tod()?'today':''}">${new Date(d+'T00:00').toLocaleDateString([],{weekday:'short',day:'numeric'})}</th>`).join('')}</tr>${ws.map(w=>`<tr><td style="border-left:5px solid ${wColor(w.id)}"><b>${esc(w.name)}</b><br><button class="btn sm s" onclick="sendSched('${w.id}','${a}')">📤 Send schedule</button></td>${days.map(d=>`<td class="cd" ${dropAttr(d)} onclick="calCellW('${d}','${w.id}')">${D.jobs.filter(j=>(j.workers||[]).includes(w.id)&&mdOn(j,d)).sort((x,y)=>x.when.localeCompare(y.when)).map(j=>chip(j,d)).join('')}</td>`).join('')}</tr>`).join('')}</table></div>`}
+ if(innerWidth<700)return ws.map(w=>`<div class="crewm" style="border-left:5px solid ${wColor(w.id)}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(w.name)}</b><button class="btn sm s" onclick="sendSched('${w.id}','${a}')">📤 Send schedule</button></div>${days.map(d=>{const L=D.jobs.filter(j=>(j.workers||[]).includes(w.id)&&mdOn(j,d)).sort((x,y)=>x.when.localeCompare(y.when));return `<div class="crewd ${d==tod()?'today':''}${holCls(d)}" ${dropAttr(d)} onclick="calCellW('${d}','${w.id}')"><div class="cdh">${new Date(d+'T00:00').toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})}</div>${holTag(d)}${L.map(j=>chip(j,d)).join('')||'<small style="color:#aaa">— tap to assign</small>'}</div>`}).join('')}</div>`).join('');
+ return `<div class="tw"><table class="crew"><tr><th>Worker</th>${days.map(d=>`<th class="${d==tod()?'today':''}${holCls(d)}">${new Date(d+'T00:00').toLocaleDateString([],{weekday:'short',day:'numeric'})}${holInfo(d)?`<small>🚫 ${esc(holInfo(d).name)}</small>`:''}</th>`).join('')}</tr>${ws.map(w=>`<tr><td style="border-left:5px solid ${wColor(w.id)}"><b>${esc(w.name)}</b><br><button class="btn sm s" onclick="sendSched('${w.id}','${a}')">📤 Send schedule</button></td>${days.map(d=>`<td class="cd${holCls(d)}" ${dropAttr(d)} onclick="calCellW('${d}','${w.id}')">${D.jobs.filter(j=>(j.workers||[]).includes(w.id)&&mdOn(j,d)).sort((x,y)=>x.when.localeCompare(y.when)).map(j=>chip(j,d)).join('')}</td>`).join('')}</tr>`).join('')}</table></div>`}
 function calCellW(day,wid){quickSched(day);setTimeout(()=>{const c=document.querySelector(`.qsw[value="${wid}"]`);if(c)c.checked=true},0)}
 function myWeek(a){const me=myWorkerId();return `<div style="white-space:pre-wrap;font-size:15px;line-height:1.6">${esc(weekText(me,a)).replace(/^.*\n/,'')}</div>`}
 {const _vc=V.cal;V.cal=()=>{if(!cal.d)cal.d=tod();if(isTech()&&!cal._t){cal.v='month';cal._t=1}if(cal.v=='crew'||cal.v=='myweek'){const a=ymd(weekStart(new Date(cal.d+'T00:00')));const sv=cal.v;cal.v='week';let h=_vc();cal.v=sv;const body=sv=='crew'?crewView(a):myWeek(a);
@@ -750,7 +789,7 @@ render();
 /* ===================== Bottom tab bar navigation ===================== */
 const ICO={home:'<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',schedule:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',sales:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/>',team:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.2c2.6.2 4.4 2 5 4.8"/>',jobs:'<rect x="5" y="4" width="14" height="18" rx="2"/><path d="M9 4V2.5h6V4M8.5 10h7M8.5 14h7M8.5 18h4"/>',onotes:'<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4M8 12h8M8 16h5"/>',more:'<circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>'};
 const GROUPS={home:{l:'Home',subs:()=>isOwner()?[['dash','Today'],['clock','Clock'],['leads','Leads']]:[['dash','Today'],['clock','Clock'],['sheets','My hours'],['leads','Leads']]},
- schedule:{l:'Schedule',subs:()=>[['cal','Calendar']]},jobs:{l:'Jobs',subs:()=>[['jobs','Jobs']]},onotes:{l:'Notes',subs:()=>[['onotes','Notes']]},sales:{l:'Sales',subs:()=>[['quotes','Quotes'],['invoices','Invoices'],['clients','Clients']]},
+ schedule:{l:'Schedule',subs:()=>isOwner()?[['cal','Calendar'],['holidays','Closed days']]:[['cal','Calendar']]},jobs:{l:'Jobs',subs:()=>[['jobs','Jobs']]},onotes:{l:'Notes',subs:()=>[['onotes','Notes']]},sales:{l:'Sales',subs:()=>[['quotes','Quotes'],['invoices','Invoices'],['clients','Clients']]},
  team:{l:'Team',subs:()=>[['workers','Workers'],['sheets','Timesheets'],['team','Logins']]},more:{l:'More',subs:()=>[]}};
 const MORE=[['book','Price book & checklists','📘'],['parts','Parts catalog','🔧'],['reports','Reports','📊'],['messages','Messages & call notes','💬'],['settings','Settings & backup','⚙️']];
 const groupsFor=()=>isOwner()?['home','schedule','jobs','onotes','sales','team','more']:isTech()?['home','schedule','jobs']:['home','schedule'];
@@ -776,11 +815,11 @@ render();
 /* ===================== Oct 10b: month-first calendar, profit report counts invoices ===================== */
 cal.v='month';cal._t=1;cal.sel=cal.sel||'';
 function monthBody(){const f=new Date(cal.d+'T00:00');f.setDate(1);const m=f.getMonth(),a=ymd(weekStart(f)),b=addDays(a,42),L=calJobs(a,b);if(!cal.sel||cal.sel<a||cal.sel>=b)cal.sel=(tod()>=a&&tod()<b&&new Date(tod()+'T00:00').getMonth()==m)?tod():ymd(f);
- const cells=[...Array(42)].map((_,i)=>{const day=addDays(a,i),jl=L.filter(j=>mdOn(j,day));return `<div class="mc ${new Date(day+'T00:00').getMonth()!=m?'other':''} ${day==tod()?'today':''} ${day==cal.sel?'sel':''}" ${dropAttr(day)} onclick="cal.sel='${day}';render()"><div class="mcn">${+day.slice(8)}</div>${jl.length?`<div class="mcd">${jl.slice(0,4).map(j=>(j.workers||[]).length?j.workers.slice(0,3).map(w=>`<i style="background:${wColor(w)}"></i>`).join(''):'<i style="background:#888"></i>').join('')}</div><div class="mcc">${jl.length} job${jl.length>1?'s':''}</div>`:''}</div>`}).join('');
+ const cells=[...Array(42)].map((_,i)=>{const day=addDays(a,i),jl=L.filter(j=>mdOn(j,day));const hx=holInfo(day);return `<div class="mc ${new Date(day+'T00:00').getMonth()!=m?'other':''} ${day==tod()?'today':''} ${day==cal.sel?'sel':''}${hx?' hol':''}" ${dropAttr(day)} onclick="cal.sel='${day}';render()"><div class="mcn">${+day.slice(8)}</div>${hx?`<div class="holm">🚫 ${esc(hx.name)}</div>`:''}${jl.length?`<div class="mcd">${jl.slice(0,4).map(j=>(j.workers||[]).length?j.workers.slice(0,3).map(w=>`<i style="background:${wColor(w)}"></i>`).join(''):'<i style="background:#888"></i>').join('')}</div><div class="mcc">${jl.length} job${jl.length>1?'s':''}</div>`:''}</div>`}).join('');
  const sj=calJobs(cal.sel,addDays(cal.sel,1));
  return `<div class="mgrid">${['M','T','W','T','F','S','S'].map(x=>`<div class="cmh">${x}</div>`).join('')}${cells}</div>
  <div class="mday"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0;font-size:16px">${new Date(cal.sel+'T00:00').toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'})}</h3><div>${isOwner()?`<button class="btn" onclick="quickSched('${cal.sel}')">+ Schedule job</button>`:''}<button class="btn s" onclick="cal.v='day';cal.d='${cal.sel}';render()">Day view</button></div></div>
- <div style="margin-top:8px">${sj.map(j=>chip(j,cal.sel)).join('')||'<p style="color:var(--m);margin:6px 0">No jobs this day.</p>'}</div></div>`}
+ ${holTag(cal.sel)}<div style="margin-top:8px">${sj.map(j=>chip(j,cal.sel)).join('')||'<p style="color:var(--m);margin:6px 0">No jobs this day.</p>'}</div></div>`}
 {const _vc=V.cal;V.cal=()=>{let h=_vc();if(cal.v=='month')h=h.replace(/<div class="card" style="padding:8px">[\s\S]*$/,`<div class="card" style="padding:8px">${monthBody()}</div>`);return h}}
 
 /* ---- profit: invoice-based ---- */
@@ -1824,6 +1863,64 @@ const _ptoGoLater=()=>{let n=0;const t=setInterval(()=>{if((typeof isOwner=='fun
 if(new URLSearchParams(location.search).get('tab')==='pto')_ptoGoLater();
 if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.tab==='pto'&&isOwner())go('pto')});
 </script>
+<script>
+/* ---------- Closed days (holidays): owners manage them under Schedule > Closed days ---------- */
+const HOL={d:'',n:''};
+const holFmt=d=>{const m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(String(d||''));return m?new Date(Date.UTC(+m[1],+m[2]-1,+m[3])).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}):''};
+const holFmtL=d=>{const m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(String(d||''));return m?new Date(Date.UTC(+m[1],+m[2]-1,+m[3])).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:'UTC'}):''};
+const holWd=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{weekday:'long',timeZone:'UTC'});
+function holPut(date,name){if(!isOwner())return false;date=String(date||'').trim();name=String(name||'').trim().slice(0,60);
+ if(!/^\d{4}-\d\d-\d\d$/.test(date)||isNaN(new Date(date+'T12:00:00Z')))return cpNote('Pick a date first.'),false;
+ const s=holStdOn(date),cur=holInfo(date);if(!name)name=(s&&s.name)||'Closed';
+ if(cur&&cur.name===name)return cpNote(holFmt(date)+' is already closed.'),false;
+ D.holidays=D.holidays||[];let d=holDoc(date);
+ if(d){d.closed=true;d.name=name;d.by=ME();d.at=new Date().toISOString()}
+ else D.holidays.push({id:date,date,name,closed:true,by:ME(),at:new Date().toISOString()});
+ save();return true}
+function holAddForm(){const date=(($('#hol_d')||{}).value||HOL.d||'').trim(),name=(($('#hol_n')||{}).value||HOL.n||'').trim();
+ if(!date)return cpNote('Pick the date to close.');
+ if(!name)return cpNote('Give it a name, like “Company picnic”.');
+ if(holPut(date,name)){HOL.d='';HOL.n='';render();cpNote('Closed – '+name+' · '+holFmt(date))}}
+function holRemove(date){if(!isOwner())return;const x=holInfo(date);if(!x)return;
+ if(!confirm('Open '+holFmt(date)+' again? ("'+x.name+'" will no longer show as closed.)'))return;
+ const s=holStdOn(date),d=holDoc(date);D.holidays=D.holidays||[];
+ if(s){if(d){d.closed=false;d.name=s.name;d.by=ME();d.at=new Date().toISOString()}else D.holidays.push({id:date,date,name:s.name,closed:false,by:ME(),at:new Date().toISOString()})}
+ else D.holidays=D.holidays.filter(h=>h.id!==date&&h.date!==date);
+ save();render();cpNote(holFmt(date)+' is open again.')}
+function holRestore(date){if(!isOwner())return;const d=holDoc(date);if(!d)return;D.holidays=(D.holidays||[]).filter(h=>h!==d);save();render();cpNote('Closed – '+((holStdOn(date)||{}).name||'holiday')+' · back on the list')}
+function holYearRows(y){const dates=new Set(holStdYear(y).filter(h=>holWeekday(h.wd)).map(h=>h.date));(D.holidays||[]).forEach(h=>{if(h&&String(h.id||h.date||'').slice(0,4)==String(y))dates.add(h.id||h.date)});
+ const open=[],closed=[];[...dates].sort().forEach(k=>{const x=holInfo(k);if(x)closed.push(x);else if(holStdOn(k))open.push(holStdOn(k))});return {closed,open}}
+V.holidays=()=>{if(!isOwner())return '<div class="card">Owners only.</div>';
+ const y0=+tod().slice(0,4),t=tod();
+ const form=`<div class="card holform"><h2>🚫 Closed days</h2><p class="holnote" style="margin-top:0">Days we’re closed. Everyone sees “Closed – name” on the schedule and Jobs list, and the 7:55 AM clock-in reminder is skipped on those days. Jobs already scheduled on a closed day keep their reminders.</p>
+ <div class="row"><div><label>Date</label><input id="hol_d" type="date" value="${esc(HOL.d)}" oninput="HOL.d=this.value"></div><div><label>Name</label><input id="hol_n" maxlength="60" placeholder="e.g. Company picnic" value="${esc(HOL.n)}" oninput="HOL.n=this.value"></div><div style="flex:0"><button class="btn" onclick="holAddForm()">Add closed day</button></div></div></div>`;
+ const yr=y=>{const {closed,open}=holYearRows(y);const wk=holStdYear(y).filter(h=>!holWeekday(h.wd));
+  return `<div class="card"><h2 style="margin-bottom:4px">${y}</h2>
+  ${closed.map(x=>`<div class="holrow ${x.date<t?'past':''}"><div class="hd"><b>${esc(holFmt(x.date))}</b><span>${esc(x.name)}</span></div><span class="holsrc ${x.std?'':'mine'}">${x.std?'Standard':'Added'}</span><button class="btn sm s" onclick="holRemove('${x.date}')">Remove</button></div>`).join('')||'<small style="color:var(--m)">No closed days.</small>'}
+  ${open.length?`<div class="holnote" style="margin-top:10px"><b>Removed standard holidays</b></div>${open.map(h=>`<div class="holrow ${h.date<t?'past':''}"><div class="hd"><b>${esc(holFmt(h.date))}</b><span>${esc(h.name)} · open</span></div><button class="btn sm s" onclick="holRestore('${h.date}')">Close again</button></div>`).join('')}`:''}
+  ${wk.length?`<div class="holnote" style="margin-top:10px">Not on a weekday, so not closed automatically: ${wk.map(h=>esc(h.name)+' ('+holWd(h.date).slice(0,3)+', '+holFmt(h.date).replace(/^\w+, /,'')+')').join(' · ')}. Use “Add closed day” above if you want one off.</div>`:''}</div>`};
+ return form+yr(y0)+yr(y0+1)};
+/* a live update must not wipe the add form while someone is typing */
+{const _rr=window.rerender;window.rerender=()=>{const a=document.activeElement;if(tab=='holidays'&&!$('#modal').innerHTML&&a&&/^hol_/.test(a.id||'')){clearTimeout(HOL.rt);HOL.rt=setTimeout(()=>window.rerender(),1500);return}_rr()}}
+/* Home: closed today (everyone but billing), or a heads-up about the next closed day within two weeks */
+{const _vd=V.dash;V.dash=()=>{const h=_vd();if(isBilling())return h;const t=tod(),x=holInfo(t);
+  const go_=isOwner()?` onclick="go('holidays')" style="cursor:pointer"`:'';
+  if(x)return `<div class="card holhome"${go_}><b>🚫 ${esc(holLabel(x))} today</b></div>`+h;
+  const n=holEach(addDays(t,1),14)[0];
+  return n?`<div class="card holhome soon"${go_}><b>🗓 ${esc(holLabel(n))}</b> <span style="color:var(--m)">· ${esc(holFmt(n.date))}</span></div>`+h:h}}
+/* Schedule > Day view: a banner and a tint on the hours */
+{const _vc=V.cal;V.cal=()=>{let h=_vc();if(cal.v==='day'&&cal.d){const x=holInfo(cal.d);if(x){h=h.replace('<div class="card" style="padding:8px">',()=>`<div class="card holday"><b>🚫 ${esc(holLabel(x))}</b>${isOwner()?` <a href="#" onclick="event.preventDefault();go('holidays')" style="margin-left:8px;font-size:13px">Closed days ›</a>`:''}</div><div class="card" style="padding:8px">`).replace('<div class="cday">','<div class="cday holbg">')}}return h}}
+/* "My week" text and Send schedule text list the closed days too */
+{const _wt=weekText;weekText=function(wid,a){let t=_wt(wid,a);const c=holEach(a,7);if(c.length)t+='\n'+c.map(x=>'• '+holFmt(x.date)+': '+holLabel(x)).join('\n');return t}}
+/* owners: a warning (never a block) when scheduling a job on a closed day */
+function holWarnHtml(d){const x=holInfo(d);return x?`<div class="holwarn">⚠ ${esc(holLabel(x))} (${esc(holFmt(d))}). You can still schedule it.</div>`:''}
+function holJwCheck(){const jw=$('#jw'),box=$('#holjw');if(!jw||!box)return;box.innerHTML=holWarnHtml((jw.value||'').slice(0,10))}
+{const _ej=editJob;editJob=function(id,fq){const r=_ej(id,fq);if(isOwner()){const jw=$('#jw');if(jw&&!$('#holjw')){jw.closest('.row')?.insertAdjacentHTML('afterend','<div id="holjw"></div>');jw.addEventListener('input',holJwCheck);jw.addEventListener('change',holJwCheck);holJwCheck()}}return r}}
+{const _qs=quickSched;quickSched=function(day,h){const r=_qs(day,h);const w=holWarnHtml(day);if(w){const m=$('#modal .modal:last-child h2');if(m)m.insertAdjacentHTML('afterend',w)}return r}}
+{const _sj=saveJob;saveJob=function(id){const d=(($('#jw')||{}).value||'').slice(0,10);const r=_sj(id);if(isOwner()&&d&&!$('#jw')){const x=holInfo(d);if(x)cpNote('⚠ '+holLabel(x)+' · '+holFmt(d)+' (scheduled anyway)')}return r}}
+{const _sq=saveQuick;saveQuick=function(day){const r=_sq(day);if(isOwner()){const x=holInfo(day);if(x&&!$('#qsj'))cpNote('⚠ '+holLabel(x)+' · '+holFmt(day)+' (scheduled anyway)')}return r}}
+{const _cm=calMove;calMove=function(id,day,h){const r=_cm(id,day,h);if(isOwner()){const x=holInfo(day);if(x)cpNote('⚠ Moved to a closed day: '+holLabel(x))}return r}}
+</script>
 <script type="module">
 /* ================================================================
    FIREBASE CONFIG — paste your config from Firebase Console here
@@ -1840,7 +1937,7 @@ const firebaseConfig = {
 /* ================================================================ */
 const COMPANY='main';
 // D key -> Firestore collection. priv = fields moved to an owner-only "<collection>_private" doc
-const SPEC={clients:{c:'clients'},workers:{c:'workers',priv:['rate','cost']},jobs:{c:'jobs',priv:['actual']},quotes:{c:'quotes'},time:{c:'timeEntries'},parts:{c:'parts'},templates:{c:'templates'},invoices:{c:'invoices'},recurring:{c:'recurring'},checklistTemplates:{c:'checklistTemplates'},users:{c:'users'},notes:{c:'notes'},leads:{c:'leads'},messages:{c:'messages'},priceImports:{c:'priceImports'},orders:{c:'orderItems'},used:{c:'partsUsed'},pto:{c:'ptoRequests'}};
+const SPEC={clients:{c:'clients'},workers:{c:'workers',priv:['rate','cost']},jobs:{c:'jobs',priv:['actual']},quotes:{c:'quotes'},time:{c:'timeEntries'},parts:{c:'parts'},templates:{c:'templates'},invoices:{c:'invoices'},recurring:{c:'recurring'},checklistTemplates:{c:'checklistTemplates'},users:{c:'users'},notes:{c:'notes'},leads:{c:'leads'},messages:{c:'messages'},priceImports:{c:'priceImports'},orders:{c:'orderItems'},used:{c:'partsUsed'},pto:{c:'ptoRequests'},holidays:{c:'holidays'}};
 // what techs may write: collection -> owner field that must equal their email, and whether they may delete
 const TECHW={time:{f:'email',del:false},notes:{f:'by',del:false},leads:{f:'by',del:false},orders:{f:'by',del:true},used:{f:'by',del:true},pto:{f:'by',del:true}};
 const SCHEMA=2;
@@ -1930,6 +2027,7 @@ async function start(){
       listenCol('workers',F.collection(co,'workers'));
       listenCol('time',F.collection(co,'timeEntries'));
       listenCol('jobs',F.collection(co,'billingJobs'));
+      unsubs.push(F.onSnapshot(F.collection(co,'holidays'),s=>{const M={};s.docs.forEach(d=>M[d.id]=d.data());pubM.holidays=M;apply(compose('holidays'),s)},()=>{})); // closed days: read-only, never blocks sign-in
       unsubs.push(F.onSnapshot(pubRef,s=>{if(!s.exists())return;const D=getD();Object.assign(D.settings,s.data());apply(D,s)},err));
     }else{
       listenCol('workers',F.collection(co,'workers'));
@@ -1941,6 +2039,7 @@ async function start(){
       listenCol('orders',F.query(F.collection(co,'orderItems'),F.where('techEmails','array-contains',me)));
       listenCol('used',F.query(F.collection(co,'partsUsed'),F.where('techEmails','array-contains',me)));
       listenCol('pto',F.query(F.collection(co,'ptoRequests'),F.where('by','==',me)));
+      unsubs.push(F.onSnapshot(F.collection(co,'holidays'),s=>{const M={};s.docs.forEach(d=>M[d.id]=d.data());pubM.holidays=M;apply(compose('holidays'),s)},()=>{})); // closed days: read-only, never blocks sign-in
       unsubs.push(F.onSnapshot(F.doc(co,'partNames','list'),s=>{window.cpPartNames=(s.exists()&&s.data().names)||[]},()=>{}));
       unsubs.push(F.onSnapshot(pubRef,s=>{if(!s.exists())return;const D=getD();Object.assign(D.settings,s.data());apply(D,s)},err));
     }
