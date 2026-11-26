@@ -1830,7 +1830,7 @@ window.cpTimePending=(function(){
 .ptost{display:inline-block;font-size:12px;font-weight:700;border-radius:9px;padding:2px 9px;background:#fff3cd;color:#7a5a00}
 .ptost.approved{background:#dff3e5;color:#176b3a}.ptost.denied{background:#fbe0dc;color:#992d22}.ptost.short{background:#ffe7c2;color:#8a4b00}
 .ptoreq .ptoh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.ptoreq .ptol{display:grid;grid-template-columns:96px 1fr;gap:3px 8px;font-size:14px;margin:8px 0}.ptoreq .ptol span{color:var(--m)}
-.ptoreq .ptoact{display:flex;gap:8px;margin-top:8px}.ptoreq .ptoact .btn{flex:1;padding:12px;font-size:15px;margin:0}
+.ptoreq .ptoact{display:flex;gap:8px;margin-top:8px}.ptoreq .ptoact .btn{flex:1;padding:12px;font-size:15px;margin:0}body.pto-lock .ptoreq .ptoact,body.pto-lock .ptoreq .ptoact .btn{pointer-events:none}
 .ptohome{cursor:pointer;border-left:4px solid #E0A100}
 </style>
 <script>
@@ -1889,21 +1889,29 @@ function ptoSend(){const d=PTO.d;
  D.pto=D.pto||[];D.pto.push(r);PTO.d={type:'',other:'',from:'',to:'',tf:'',tt:'',reason:'',sig:'',ok:false};
  save();setTimeout(()=>{PTO.busy=false;render()},400);cpNote('Request sent ✔')}
 function ptoCard(r,own){const o=isOwner(),done=r.status!=='pending',st=r.status==='approved'?'Approved':r.status==='denied'?'Denied':'Waiting for approval';
- return `<div class="card ptoreq ${esc(r.status)}"><div class="ptoh"><b style="flex:1;font-size:16px;min-width:90px">${esc(o||!own?r.byName||r.by:ptoTypeL(r))}</b><span class="ptost ${esc(r.status)}">${st}</span>${r.shortNotice&&o&&!done?'<span class="ptost short">Short notice</span>':''}</div>
+ return `<div class="card ptoreq ${esc(r.status)}" data-id="${esc(r.id)}"><div class="ptoh"><b style="flex:1;font-size:16px;min-width:90px">${esc(o||!own?r.byName||r.by:ptoTypeL(r))}</b><span class="ptost ${esc(r.status)}">${st}</span>${r.shortNotice&&o&&!done?'<span class="ptost short">Short notice</span>':''}</div>
  <div class="ptol">${o?`<span>Type</span><b>${esc(ptoTypeL(r))}</b>`:''}<span>Dates</span><b>${esc(ptoDates(r))}</b><span>Time off</span><b>${esc(ptoTimes(r))}</b><span>Reason</span><div style="white-space:pre-wrap">${esc(r.reason||'—')}</div>${o?`<span>Signed</span><div>${esc(r.signature||'—')} · ${esc(ptoFmtDay(String(r.signedAt||r.createdAt).slice(0,10)))}</div>`:''}<span>Sent</span><div>${esc(fmtDT(r.createdAt))}</div>
  ${done?`<span>${o?'Decision':'Answer'}</span><div>${esc(st)}${r.decidedAt?' · '+esc(fmtDT(r.decidedAt)):''}${o&&r.decidedByName?' · '+esc(r.decidedByName):''}</div>${r.managerComment?`<span>Comments</span><div style="white-space:pre-wrap">${esc(r.managerComment)}</div>`:''}`:''}</div>
- ${o?(done?`<div class="ptoact"><button class="btn sm s" onclick="ptoDecide('${r.id}','pending')">Undo — back to waiting</button></div>`
-   :`<label>Comments (optional)</label><input id="pto_c_${r.id}" value="${esc(PTO.cm[r.id]||'')}" maxlength="300" oninput="PTO.cm['${r.id}']=this.value" placeholder="Shown to ${esc(r.byName||'them')} with the answer"><div class="ptoact"><button class="btn g" onclick="ptoDecide('${r.id}','approved')">✓ Approve</button><button class="btn d" onclick="ptoDecide('${r.id}','denied')">✕ Deny</button></div>`)
+ ${o?(done?`<div class="ptoact"><button class="btn sm s" type="button" onclick="ptoDecide('${r.id}','pending')">Undo — back to waiting</button></div>`
+   :`<label>Comments (optional)</label><input id="pto_c_${r.id}" value="${esc(PTO.cm[r.id]||'')}" maxlength="300" oninput="PTO.cm['${r.id}']=this.value" placeholder="Shown to ${esc(r.byName||'them')} with the answer"><div class="ptoact"><button class="btn g" type="button" onclick="ptoDecide('${r.id}','approved')">✓ Approve ${esc(r.byName||'')}</button><button class="btn d" type="button" onclick="ptoDecide('${r.id}','denied')">✕ Deny</button></div>`)
    :(r.status==='pending'&&r.by===ME()?`<div class="ptoact"><button class="btn sm s" onclick="ptoWithdraw('${r.id}')">Withdraw request</button></div>`:'')}</div>`}
+function ptoAsk(r,st){const who=r.byName||r.by||'this request';const what=[ptoTypeL(r),ptoDates(r),ptoTimes(r)].filter(Boolean).join(' · ');
+ if(st==='approved')return confirm('Approve time off for '+who+'?\n'+what);
+ if(st==='denied')return confirm('Deny time off for '+who+'?\n'+what);
+ return confirm('Move '+who+'\'s request back to waiting?')}
+function ptoLock(on){document.body.classList.toggle('pto-lock',!!on);if(!on)return;clearTimeout(PTO.lockT);PTO.lockT=setTimeout(()=>ptoLock(false),900)}
 function ptoDecide(id,st){if(!isOwner())return;const r=(D.pto||[]).find(x=>x.id==id);if(!r)return;
- if(st==='pending'){r.status='pending';delete r.decidedBy;delete r.decidedByName;delete r.decidedAt}
- else{const c=(($('#pto_c_'+id)||{}).value||PTO.cm[id]||'').trim();r.status=st;r.decidedBy=ME();r.decidedByName=ordWho();r.decidedAt=new Date().toISOString();if(c)r.managerComment=c.slice(0,300);else delete r.managerComment;delete PTO.cm[id]}
- save();render();cpNote(st==='approved'?'Approved ✔':st==='denied'?'Denied':'Back to waiting')}
+ if(!ptoAsk(r,st))return;
+ PTO.stay=PTO.stay||{};
+ if(st==='pending'){r.status='pending';delete r.decidedBy;delete r.decidedByName;delete r.decidedAt;delete PTO.stay[id]}
+ else{const c=(($('#pto_c_'+id)||{}).value||PTO.cm[id]||'').trim();r.status=st;r.decidedBy=ME();r.decidedByName=ordWho();r.decidedAt=new Date().toISOString();if(c)r.managerComment=c.slice(0,300);else delete r.managerComment;delete PTO.cm[id];PTO.stay[id]=1}
+ ptoLock(true);save();render();cpNote(st==='approved'?'Approved ✔':st==='denied'?'Denied':'Back to waiting')}
 function ptoWithdraw(id){const r=(D.pto||[]).find(x=>x.id==id);if(!r||r.by!==ME()||r.status!=='pending')return;if(!confirm('Withdraw this request?'))return;D.pto=D.pto.filter(x=>x.id!=id);save();render()}
 V.pto=()=>{if(isBilling())return '<div class="card">Not available for this login.</div>';const o=isOwner(),L=ptoList().sort(ptoSort);
  if(!o)return ptoForm()+`<h3 style="margin:18px 4px 8px">My requests</h3>`+(L.map(r=>ptoCard(r,true)).join('')||'<div class="card"><small style="color:var(--m)">You haven’t sent a time-off request yet.</small></div>');
- const P=L.filter(r=>r.status==='pending').sort((a,b)=>String(a.from).localeCompare(String(b.from))),Dn=L.filter(r=>r.status!=='pending'),shown=PTO.all?Dn:Dn.slice(0,15);
- return `<h3 style="margin:2px 4px 8px">Waiting for an answer${P.length?` <i class="bdg2">${P.length}</i>`:''}</h3>${P.map(r=>ptoCard(r,false)).join('')||'<div class="card"><small style="color:var(--m)">Nothing waiting. 🎉</small></div>'}
+ PTO.stay=PTO.stay||{};
+ const P=L.filter(r=>r.status==='pending'||PTO.stay[r.id]).sort((a,b)=>String(a.from).localeCompare(String(b.from))),Dn=L.filter(r=>r.status!=='pending'&&!PTO.stay[r.id]),shown=PTO.all?Dn:Dn.slice(0,15),nPend=P.filter(r=>r.status==='pending').length;
+ return `<h3 style="margin:2px 4px 8px">Waiting for an answer${nPend?` <i class="bdg2">${nPend}</i>`:''}</h3>${P.map(r=>ptoCard(r,false)).join('')||'<div class="card"><small style="color:var(--m)">Nothing waiting. 🎉</small></div>'}
  <h3 style="margin:18px 4px 8px">Answered</h3>${shown.map(r=>ptoCard(r,false)).join('')||'<div class="card"><small style="color:var(--m)">No answered requests yet.</small></div>'}${Dn.length>15?`<button class="btn s" onclick="PTO.all=!PTO.all;render()">${PTO.all?'Show fewer':'Show all '+Dn.length}</button>`:''}
  <details class="card" style="margin-top:14px" ${PTO.fo||PTO.d.type||PTO.d.from?'open':''} ontoggle="PTO.fo=this.open"><summary style="font-weight:700;cursor:pointer">Request time off for myself</summary>${ptoForm().replace('<div class="card ptoform">','<div class="ptoform" style="margin-top:8px">')}</details>
  ${L.filter(r=>r.by===ME()).length?`<h3 style="margin:18px 4px 8px">My own requests</h3>${L.filter(r=>r.by===ME()).map(r=>ptoCard(r,true)).join('')}`:''}`};
