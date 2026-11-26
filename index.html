@@ -1488,6 +1488,8 @@ body.cpwait #syncst{animation:cpblink 1s infinite}@keyframes cpblink{50%{opacity
 function cpToast(t){let e=document.getElementById('cptoast');if(!e){e=document.createElement('div');e.id='cptoast';document.body.appendChild(e)}e.textContent=t;clearTimeout(cpToast.t);cpToast.t=setTimeout(()=>e.remove(),1800)}
 document.addEventListener('click',e=>{if(!document.body.classList.contains('cpwait'))return;const t=e.target;
   if(t.closest('#bnav,.subseg,.subbar,.morelist,summary,#auth,#cpupd'))return;
+  const oc=t.closest('[onclick],button');
+  if(oc&&/dayIn\(|dayOutW\(|jobStart\(|jobStop\(|clockIn\(|clockOut\(/.test(oc.getAttribute('onclick')||''))return; // clock in/out must work with no signal
   if(t.closest('button,input,select,textarea,a,label,[onclick]')){e.preventDefault();e.stopPropagation();cpToast('One sec, still connecting…')}},true);
 document.addEventListener('focusin',e=>{if(document.body.classList.contains('cpwait')&&e.target.matches('input,select,textarea')&&!e.target.closest('#auth')){e.target.blur();cpToast('One sec, still connecting…')}},true);
 /* Offline-ready app shell (sw.js). A new version is saved in the background; we offer it here and
@@ -1767,7 +1769,9 @@ window.addEventListener('hashchange',e=>{if(_sheetIgnorePop||document.querySelec
 const tmHM=s=>new Date(s).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
 
 function tCanEdit(w){return isOwner()||W(w||myWorkerId())?.timeEdit!==false}
-function dayBusyMsg(w,d){return (w==myWorkerId()?"You're":wWho(w)+' is')+' already clocked in for the day since '+tmHM(d.in)+'.'}
+function dayBusyMsg(w,d){const who=(w==myWorkerId()?"You're":wWho(w)+' is'),same=typeof ctYmd=='function'?ctYmd(new Date(d.in))===ctYmd(new Date()):true;
+  if(!same)return who+' still clocked in from '+new Date(d.in).toLocaleDateString('en-US',{month:'short',day:'numeric'})+' since '+tmHM(d.in)+'. Clock out first to start a new day.';
+  return who+' already clocked in for the day since '+tmHM(d.in)+'. Clock out first if you already ended that shift.'}
 {const _tn=tNew;tNew=function(w,kind,job){if(kind=='day'){const d=dayOpen(w);if(d)return d}return _tn(w,kind,job)}}
 {const _di=dayIn;dayIn=function(w){const d=canClock(w)&&dayOpen(w);if(d)return cpNote(dayBusyMsg(w,d));return _di(w)}}
 {const _et=editTime;editTime=function(id,wk){if(!tCanEdit())return;return _et(id,wk)}}
@@ -1788,6 +1792,30 @@ function setTimeEdit(id,on){const w=W(id);if(!w||!isOwner())return;w.timeEdit=!!
  return h+`<div class="card" id="tperm"><h2>Time permissions</h2><p style="color:var(--m);margin:0 0 8px">Off = that tech can only clock in and out with the buttons. They can't add hours by hand or change times. Owners can always fix time.</p>${D.workers.map(w=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--b,#eee)"><div style="flex:1">${wChip(w.id)||esc(w.name)}</div><div style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="te_${w.id}" style="width:auto" ${w.timeEdit!==false?'checked':''} onchange="setTimeEdit('${w.id}',this.checked)"><span onclick="const c=document.getElementById('te_${w.id}');c.checked=!c.checked;setTimeEdit('${w.id}',c.checked)">Can add/edit own time</span></div></div>`).join('')}</div>`}}
 
 </script>
+<script>
+/* ---------- Offline clock ----------
+   Clock in/out must work with no signal. A clock-out is also saved in localStorage
+   (cp-pending-time) so a later server refresh cannot put the person back "on the clock"
+   if that clock-out has not reached the server yet. Pending changes are re-applied on
+   every snapshot and sent again once the phone is back online. */
+window.cpTimePending=(function(){
+  const KEY='cp-pending-time';
+  function load(){try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
+  function store(a){try{localStorage.setItem(KEY,JSON.stringify(a))}catch(e){}}
+  function recordOut(id,out){if(!id||!out)return;const a=load().filter(x=>!(x.op==='out'&&x.id===id));a.push({op:'out',id,out,at:new Date().toISOString()});store(a)}
+  function recordUpsert(t){if(!t||!t.id)return;const e={id:t.id,worker:t.worker,job:t.job||'',kind:t.kind,in:t.in,out:t.out||null};if(t.email)e.email=t.email;if(t.by)e.by=t.by;const a=load().filter(x=>!(x.op==='upsert'&&x.id===t.id));a.push({op:'upsert',id:t.id,entry:e,at:new Date().toISOString()});store(a)}
+  function apply(D){if(!D||!D.time)return false;let ch=false;for(const p of load()){if(p.op==='out'){const x=D.time.find(y=>y.id===p.id);if(x&&!x.out){x.out=p.out;ch=true}}else if(p.op==='upsert'&&p.entry){const x=D.time.find(y=>y.id===p.id);if(!x){D.time.push(Object.assign({},p.entry));ch=true}else if(!x.out&&p.entry.out){x.out=p.entry.out;ch=true}}}return ch}
+  function ackIfServer(D,s){if(!s||!s.metadata||s.metadata.fromCache)return;const a=load();const keep=a.filter(p=>{const x=(D.time||[]).find(y=>y.id===p.id);if(p.op==='out')return !(x&&x.out);if(p.op==='upsert'){if(!x)return true;if(p.entry&&p.entry.out)return !x.out;return false}return true});if(keep.length!==a.length)store(keep)}
+  addEventListener('online',()=>{if(load().length&&window.cloudSave)window.cloudSave()});
+  return {KEY,load,store,recordOut,recordUpsert,apply,ackIfServer};
+})();
+{const _d=dayOutW;dayOutW=function(w){const r=jobOpen(w),d=dayOpen(w);const ret=_d(w);if(r&&r.out)cpTimePending.recordOut(r.id,r.out);if(d&&d.out)cpTimePending.recordOut(d.id,d.out);return ret}}
+{const _js=jobStop;jobStop=function(w){const r=jobOpen(w);const ret=_js(w);if(r&&r.out)cpTimePending.recordOut(r.id,r.out);return ret}}
+{const _jst=jobStart;jobStart=function(w,jid){const prev=jobOpen(w),had=dayOpen(w);const ret=_jst(w,jid);if(prev&&prev.out)cpTimePending.recordOut(prev.id,prev.out);const d=dayOpen(w);if(d&&d!==had)cpTimePending.recordUpsert(d);const r=jobOpen(w);if(r&&r!==prev)cpTimePending.recordUpsert(r);return ret}}
+{const _di=dayIn;dayIn=function(w){const had=dayOpen(w);const ret=_di(w);const d=dayOpen(w);if(d&&d!==had)cpTimePending.recordUpsert(d);return ret}}
+{const _st=saveTime;saveTime=function(id){const before=id&&(D.time||[]).find(x=>x.id==id),prevOut=before&&before.out,n=(D.time||[]).length;const ret=_st(id);const t=id?(D.time||[]).find(x=>x.id==id):(D.time||[])[D.time.length-1];if(t&&t.out&&t.out!==prevOut)cpTimePending.recordOut(t.id,t.out);if(!id&&t&&(D.time||[]).length>n)cpTimePending.recordUpsert(t);return ret}}
+</script>
+
 <style>.finbar{background:#eef8f0;border:1px solid #cde8d3;border-radius:10px;padding:10px 12px;margin:8px 0 10px;display:flex;flex-direction:column;gap:6px}.finbar.done{background:#f4f6f8;border-color:#e1e5ea}.finbtn{background:#1e8e3e!important;font-size:17px;padding:12px}.pill.rdy{background:#fff3cd;color:#7a5a00}.rdyrow{display:flex;gap:10px;align-items:center;border-top:1px solid #eee;padding:8px 0}.rdycard{border-left:4px solid #1e8e3e}</style>
 <style>
 .ptoform .ptot{padding:11px 6px;border:1.5px solid #c5cfda;background:#fff;border-radius:8px;font-size:14px;font-weight:600;color:var(--t);cursor:pointer;margin:0;min-height:44px}
@@ -2116,28 +2144,28 @@ async function start(){
   const split=(k,x)=>{const p=SPEC[k].priv;if(!p)return[clean(x),null];const a={},b={};for(const f in x)(p.includes(f)?b:a)[f]=x[f];return[clean(a),clean(b)]};
   const snapLast=D=>{const bj=last.bj;last={bj};for(const k in SPEC){last[k]={};(D[k]||[]).forEach(x=>last[k][x.id]=stable(x))}last.meta=stable(meta(D))};
 
-  async function commit(ops){for(let i=0;i<ops.length;i+=400){const wb=F.writeBatch(db);ops.slice(i,i+400).forEach(([t,r,v])=>t=='set'?wb.set(r,v):t=='upd'?wb.update(r,v):wb.delete(r));
-    try{await wb.commit()}catch(e){st.textContent='⚠ sync error';alert('Sync error: '+nice(e))}}}
+  async function commit(ops){if(!ops.length)return true;for(let i=0;i<ops.length;i+=400){const wb=F.writeBatch(db);ops.slice(i,i+400).forEach(([t,r,v])=>t=='set'?wb.set(r,v):t=='upd'?wb.update(r,v):wb.delete(r));
+    try{await wb.commit()}catch(e){st.textContent=navigator.onLine===false?'● offline — saved on this phone, will sync when back online':'⚠ sync error';if(navigator.onLine!==false)alert('Sync error: '+nice(e));return false}}return true}
 
   // Push only what changed since last sync
   async function push(full=false){
-    if(applying||!ready&&!full)return;const D=getD();const ops=[];
+    if(applying||!ready&&!full)return;const D=getD();const ops=[];const next={};
     if(role==='owner'){
       for(const k in SPEC){const c=SPEC[k].c,prev=full?{}:(last[k]||{}),cur={};
         (D[k]||[]).forEach(x=>{if(!x.id)return;const s=stable(x);cur[x.id]=s;if(prev[x.id]!==s){const [a,b]=split(k,x);ops.push(['set',F.doc(co,c,x.id),a]);if(b)ops.push(['set',F.doc(co,c+'_private',x.id),b])}});
         for(const id in prev)if(!(id in cur)){ops.push(['del',F.doc(co,c,id)]);if(SPEC[k].priv)ops.push(['del',F.doc(co,c+'_private',id)])}
-        last[k]=cur}
+        next[k]=cur}
       // billingJobs/{jobId}: ONLY job number + customer name, for the read-only Billing role (job docs can hold quote/price links)
       {const pb=full?{}:(last.bj||{}),cb={};(D.jobs||[]).forEach(j=>{if(!j.id)return;const c=(D.clients||[]).find(x=>x.id==j.client);const v={num:j.num||'',clientName:(c&&c.name)||j.clientName||''};const sv=stable(v);cb[j.id]=sv;if(pb[j.id]!==sv)ops.push(['set',F.doc(co,'billingJobs',j.id),v])});
-        for(const id in pb)if(!(id in cb))ops.push(['del',F.doc(co,'billingJobs',id)]);last.bj=cb}
-      {const nm=[...new Set((D.parts||[]).map(p=>String(p.name||'').trim()).filter(Boolean))].sort();const sn=JSON.stringify(nm);if(full||sn!==last.pn)ops.push(['set',F.doc(co,'partNames','list'),{names:nm,at:new Date().toISOString()}]);last.pn=sn}
-      const m=stable(meta(D));if(full||m!==last.meta){ops.push(['set',metaRef,clean(meta(D))]);const S=D.settings;ops.push(['set',pubRef,clean({company:S.company||'',phone:S.phone||''})])}last.meta=m;
+        for(const id in pb)if(!(id in cb))ops.push(['del',F.doc(co,'billingJobs',id)]);next.bj=cb}
+      {const nm=[...new Set((D.parts||[]).map(p=>String(p.name||'').trim()).filter(Boolean))].sort();const sn=JSON.stringify(nm);if(full||sn!==last.pn)ops.push(['set',F.doc(co,'partNames','list'),{names:nm,at:new Date().toISOString()}]);next.pn=sn}
+      const m=stable(meta(D));if(full||m!==last.meta){ops.push(['set',metaRef,clean(meta(D))]);const S=D.settings;ops.push(['set',pubRef,clean({company:S.company||'',phone:S.phone||''})])}next.meta=m;
     }else if(role==='tech'){
       for(const k in TECHW){const {f,del}=TECHW[k],c=SPEC[k].c,pt=last[k]||{},cur={};(D[k]||[]).forEach(t=>{const s=stable(t);cur[t.id]=s;if(pt[t.id]!==s&&t[f]===me)ops.push(['set',F.doc(co,c,t.id),clean(t)])});
-        if(del)for(const id in pt)if(!(id in cur)&&JSON.parse(pt[id])[f]===me)ops.push(['del',F.doc(co,c,id)]);last[k]=cur}
-      const pj=last.jobs||{},cj={};(D.jobs||[]).forEach(j=>{const s=stable(j);cj[j.id]=s;if(pj[j.id]&&pj[j.id]!==s){const o=JSON.parse(pj[j.id]);const fin=o.status!==j.status&&j.status==='Completed'&&j.finishedBy===me;if(fin||stable(o.techNotes)!==stable(j.techNotes)||stable(o.checklist)!==stable(j.checklist))ops.push(['upd',F.doc(co,'jobs',j.id),Object.assign({techNotes:j.techNotes||'',checklist:clean(j.checklist||[]),updatedBy:me},fin?Object.assign({status:'Completed',finishedBy:me,finishedByName:j.finishedByName||'',finishedAt:j.finishedAt},j.restock?{restock:clean(j.restock)}:{},j.finishSummary?{finishSummary:clean(j.finishSummary)}:{}):{})])}});last.jobs=cj;
+        if(del)for(const id in pt)if(!(id in cur)&&JSON.parse(pt[id])[f]===me)ops.push(['del',F.doc(co,c,id)]);next[k]=cur}
+      const pj=last.jobs||{},cj={};(D.jobs||[]).forEach(j=>{const s=stable(j);cj[j.id]=s;if(pj[j.id]&&pj[j.id]!==s){const o=JSON.parse(pj[j.id]);const fin=o.status!==j.status&&j.status==='Completed'&&j.finishedBy===me;if(fin||stable(o.techNotes)!==stable(j.techNotes)||stable(o.checklist)!==stable(j.checklist))ops.push(['upd',F.doc(co,'jobs',j.id),Object.assign({techNotes:j.techNotes||'',checklist:clean(j.checklist||[]),updatedBy:me},fin?Object.assign({status:'Completed',finishedBy:me,finishedByName:j.finishedByName||'',finishedAt:j.finishedAt},j.restock?{restock:clean(j.restock)}:{},j.finishSummary?{finishSummary:clean(j.finishSummary)}:{}):{})])}});next.jobs=cj;
     }
-    await commit(ops);
+    if(await commit(ops))Object.assign(last,next);
   }
   window.cloudSave=()=>push();
 
@@ -2172,7 +2200,7 @@ async function start(){
       unsubs.push(F.onSnapshot(pubRef,s=>{if(!s.exists())return;const D=getD();Object.assign(D.settings,s.data());apply(D,s)},err));
     }
   }
-  function apply(D,s){applying=true;setDSoon(D);applying=false;st.textContent=s.metadata.fromCache?'● offline (cached)':(s.metadata.hasPendingWrites?'● syncing…':'● live');rerenderSoon();$('#cname').innerHTML='<img src="logo-mono-white.png" alt="" class="hlogo">'+esc(!D.settings.company||D.settings.company=='Your Plumbing Co.'?'Central Plumbing':D.settings.company)}
+  function apply(D,s){applying=true;if(window.cpTimePending){window.cpTimePending.ackIfServer(D,s);window.cpTimePending.apply(D)}setDSoon(D);applying=false;st.textContent=s.metadata.fromCache?'● offline (cached)':(s.metadata.hasPendingWrites?'● syncing…':'● live');if(window.cpTimePending&&window.cpTimePending.load().length)setTimeout(()=>{if(window.cloudSave)window.cloudSave()},0);rerenderSoon();$('#cname').innerHTML='<img src="logo-mono-white.png" alt="" class="hlogo">'+esc(!D.settings.company||D.settings.company=='Your Plumbing Co.'?'Central Plumbing':D.settings.company)}
   function err(e){endWait();st.textContent='⚠ '+nice(e);console.warn(e);if(e.code=='permission-denied'&&role!=='owner'){alert('Access problem: '+nice(e));A.signOut(auth)}}
 
   // Firestore-backed photo store: photos/{id} (meta) + photos/{id}/chunks/{n} (base64 pieces < 1MB each)
@@ -2232,7 +2260,7 @@ async function start(){
         if(r.empty){const D=getD(),n=Object.keys(SPEC).reduce((a,k)=>a+(D[k]||[]).filter(x=>!x.sample).length,0);
           if(n&&!confirm(`The shared company account is empty.\n\nUpload the ${n} record(s) saved on this device so everyone can see them?\n\nOK = upload  ·  Cancel = start fresh`)){const b=norm(blank());b.settings=D.settings;setD(b)}
           derive();await push(true);
-        }else{setD(r.D);snapLast(getD());derive();
+        }else{setD(r.D);snapLast(getD());if(window.cpTimePending&&window.cpTimePending.apply(getD())){try{localStorage.setItem(K,JSON.stringify(getD()))}catch(e){}}derive();
           if(r.schema<SCHEMA){st.textContent='● upgrading data…';await push(true)} // migration: split private fields out of public docs, add techEmails etc.
         }
         ready=true;await push();window.onDataReady&&window.onDataReady();
