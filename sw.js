@@ -6,7 +6,7 @@
 //    (they show "New version ready - tap to update").
 // Only GET requests for our own shell files and the pinned Firebase SDK on www.gstatic.com are cached.
 // Firestore / sign-in traffic is never touched.
-const VERSION='cp-shell-multiphoto-v1';               // bump on any sw.js change; old caches are deleted on activate
+const VERSION='cp-shell-clock-photo-v1';               // bump on any sw.js change; old caches are deleted on activate
 const APP=new URL('./',self.location).href; // https://centralplumbingne.github.io/Plumbing-app/
 const PAGE=APP+'index.html';
 const SHELL=[PAGE,APP+'manifest.json',APP+'logo.png',APP+'logo-mono-white.png',APP+'icon-180.png',APP+'icon-192.png'];
